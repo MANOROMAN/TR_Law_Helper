@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../constants/app_colors.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class LawyerContactScreen extends StatelessWidget {
@@ -8,7 +9,9 @@ class LawyerContactScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Avukatla İletişime Geç"),
-        backgroundColor: const Color(0xFF2D3E50),
+        backgroundColor: AppColors.primaryBlue,
+        foregroundColor: AppColors.white,
+        iconTheme: const IconThemeData(color: AppColors.primaryYellow),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

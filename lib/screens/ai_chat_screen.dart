@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/gemini_service.dart';
+import '../services/config_service.dart';
+import '../constants/app_colors.dart';
 
 class AIChatScreen extends StatefulWidget {
   @override
@@ -15,15 +17,33 @@ class _AIChatScreenState extends State<AIChatScreen> {
   @override
   void initState() {
     super.initState();
-    // ÖNEMLI: Google AI Studio'dan aldığınız Gemini API anahtarınızı buraya yazın
-    const String apiKey = 'BURAYA_GEMINI_API_ANAHTARINIZI_YAZISIN'; 
-    _geminiService = GeminiService(apiKey: apiKey);
+    _initializeService();
+  }
 
-    // Hoş geldin mesajı
-    _messages.add(ChatMessage(
-      text: "Merhaba! Ben Türk hukuk sistemi konusunda uzmanlaşmış yapay zeka danışmanınızım. Size nasıl yardımcı olabilirim?",
-      isUser: false,
-    ));
+  Future<void> _initializeService() async {
+    final apiKey = await ConfigService.getApiKey();
+    if (apiKey != null && apiKey.isNotEmpty) {
+      _geminiService = GeminiService(apiKey: apiKey);
+      setState(() {
+        _messages.add(
+          ChatMessage(
+            text:
+                "Merhaba! Ben Türk hukuk sistemi konusunda uzmanlaşmış yapay zeka danışmanınızım. Size nasıl yardımcı olabilirim?",
+            isUser: false,
+          ),
+        );
+      });
+    } else {
+      setState(() {
+        _messages.add(
+          ChatMessage(
+            text:
+                "API anahtarı bulunamadı. Lütfen ayarlardan API anahtarınızı girin.",
+            isUser: false,
+          ),
+        );
+      });
+    }
   }
 
   @override
@@ -31,7 +51,9 @@ class _AIChatScreenState extends State<AIChatScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("AI'ye Sor"),
-        backgroundColor: const Color(0xFF2D3E50),
+        backgroundColor: AppColors.primaryBlue,
+        foregroundColor: AppColors.white,
+        iconTheme: const IconThemeData(color: AppColors.primaryYellow),
       ),
       body: Column(
         children: [
@@ -67,13 +89,14 @@ class _AIChatScreenState extends State<AIChatScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Row(
-        mainAxisAlignment:
-            message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: message.isUser
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         children: [
           if (!message.isUser) ...[
             CircleAvatar(
-              backgroundColor: const Color(0xFF2D3E50),
-              child: const Icon(Icons.smart_toy, color: Colors.white),
+              backgroundColor: AppColors.primaryBlue,
+              child: const Icon(Icons.smart_toy, color: AppColors.white),
             ),
             const SizedBox(width: 8),
           ],
@@ -82,14 +105,14 @@ class _AIChatScreenState extends State<AIChatScreen> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: message.isUser
-                    ? const Color(0xFF2D3E50)
-                    : Colors.grey[200],
+                    ? AppColors.primaryBlue
+                    : AppColors.surfaceBackground,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Text(
                 message.text,
                 style: TextStyle(
-                  color: message.isUser ? Colors.white : Colors.black87,
+                  color: message.isUser ? AppColors.white : AppColors.darkGrey,
                   fontSize: 16,
                 ),
               ),
@@ -98,8 +121,8 @@ class _AIChatScreenState extends State<AIChatScreen> {
           if (message.isUser) ...[
             const SizedBox(width: 8),
             CircleAvatar(
-              backgroundColor: Colors.blue,
-              child: const Icon(Icons.person, color: Colors.white),
+              backgroundColor: AppColors.primaryYellow,
+              child: const Icon(Icons.person, color: AppColors.primaryBlue),
             ),
           ],
         ],
@@ -111,10 +134,10 @@ class _AIChatScreenState extends State<AIChatScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBackground,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.3),
+            color: AppColors.primaryBlue.withOpacity(0.1),
             blurRadius: 5,
             offset: const Offset(0, -2),
           ),
@@ -132,7 +155,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
                   borderSide: BorderSide.none,
                 ),
                 filled: true,
-                fillColor: Colors.grey[100],
+                fillColor: AppColors.surfaceBackground,
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 20,
                   vertical: 10,
@@ -145,9 +168,9 @@ class _AIChatScreenState extends State<AIChatScreen> {
           const SizedBox(width: 8),
           FloatingActionButton(
             onPressed: _isLoading ? null : _sendMessage,
-            backgroundColor: const Color(0xFF2D3E50),
+            backgroundColor: AppColors.primaryYellow,
             mini: true,
-            child: const Icon(Icons.send, color: Colors.white),
+            child: const Icon(Icons.send, color: AppColors.primaryBlue),
           ),
         ],
       ),
@@ -173,10 +196,12 @@ class _AIChatScreenState extends State<AIChatScreen> {
       });
     } catch (e) {
       setState(() {
-        _messages.add(ChatMessage(
-          text: "Üzgünüm, şu anda bir hata oluştu. Lütfen tekrar deneyin.",
-          isUser: false,
-        ));
+        _messages.add(
+          ChatMessage(
+            text: "Üzgünüm, şu anda bir hata oluştu. Lütfen tekrar deneyin.",
+            isUser: false,
+          ),
+        );
         _isLoading = false;
       });
     }

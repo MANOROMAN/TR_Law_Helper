@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/app_colors.dart';
 
 class FilesScreen extends StatefulWidget {
   @override
@@ -6,98 +7,52 @@ class FilesScreen extends StatefulWidget {
 }
 
 class _FilesScreenState extends State<FilesScreen> {
-  List<DocumentItem> _documents = [
-    DocumentItem(
-      name: 'Boşanma Dilekçesi.pdf',
-      type: 'PDF',
-      size: '2.3 MB',
-      category: 'Dilekçeler',
-      dateModified: DateTime.now().subtract(Duration(days: 1)),
-      icon: Icons.picture_as_pdf,
-      color: Colors.red,
-    ),
-    DocumentItem(
-      name: 'İş Sözleşmesi Taslağı.docx',
-      type: 'DOCX',
-      size: '1.8 MB',
-      category: 'Sözleşmeler',
-      dateModified: DateTime.now().subtract(Duration(days: 3)),
-      icon: Icons.description,
-      color: Colors.blue,
-    ),
-    DocumentItem(
-      name: 'Mahkeme Kararı.jpg',
-      type: 'JPG',
-      size: '4.1 MB',
-      category: 'Kararlar',
-      dateModified: DateTime.now().subtract(Duration(days: 5)),
-      icon: Icons.image,
-      color: Colors.green,
-    ),
-    DocumentItem(
-      name: 'Vekalet Sözleşmesi.pdf',
-      type: 'PDF',
-      size: '1.2 MB',
-      category: 'Sözleşmeler',
-      dateModified: DateTime.now().subtract(Duration(days: 8)),
-      icon: Icons.picture_as_pdf,
-      color: Colors.red,
-    ),
-  ];
+  List<FileItem> _documents = [];
 
-  String _selectedCategory = 'Tümü';
-  final List<String> _categories = ['Tümü', 'Dilekçeler', 'Sözleşmeler', 'Kararlar', 'Diğer'];
-
-  List<DocumentItem> get _filteredDocuments {
-    if (_selectedCategory == 'Tümü') {
-      return _documents;
-    }
-    return _documents.where((doc) => doc.category == _selectedCategory).toList();
+  @override
+  void initState() {
+    super.initState();
+    _loadSampleFiles();
   }
 
-  void _showAddDocumentDialog() {
+  void _loadSampleFiles() {
+    _documents = [
+      FileItem('Dava Dilekçesi.pdf', 'PDF', '2.3 MB', DateTime.now().subtract(const Duration(days: 2))),
+      FileItem('Tanık Beyanı.docx', 'DOCX', '1.1 MB', DateTime.now().subtract(const Duration(days: 5))),
+      FileItem('Mahkeme Kararı.pdf', 'PDF', '3.7 MB', DateTime.now().subtract(const Duration(days: 10))),
+      FileItem('Sözleşme.pdf', 'PDF', '1.8 MB', DateTime.now().subtract(const Duration(days: 15))),
+    ];
+  }
+
+  void _deleteFile(int index) {
+    final file = _documents[index];
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Belge Ekle'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.camera_alt),
-                title: const Text('Fotoğraf Çek'),
-                onTap: () {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Kamera açılıyor...')),
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo_library),
-                title: const Text('Galeriden Seç'),
-                onTap: () {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Galeri açılıyor...')),
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.file_upload),
-                title: const Text('Dosya Yükle'),
-                onTap: () {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Dosya seçici açılıyor...')),
-                  );
-                },
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('Dosyayı Sil'),
+        content: Text('${file.name} dosyasını silmek istediğinizden emin misiniz?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('İptal'),
           ),
-        );
-      },
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _documents.removeAt(index);
+              });
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${file.name} silindi'),
+                  backgroundColor: AppColors.primaryBlue,
+                ),
+              );
+            },
+            child: const Text('Sil', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -105,206 +60,229 @@ class _FilesScreenState extends State<FilesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Belgelerim'),
-        backgroundColor: const Color(0xFF2D3E50),
+        title: const Text('Dosyalar'),
+        backgroundColor: AppColors.primaryBlue,
+        foregroundColor: AppColors.white,
+        iconTheme: const IconThemeData(color: AppColors.primaryYellow),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () {
+              // Arama fonksiyonu
+            },
+          ),
+        ],
       ),
-      body: Column(
-        children: [
-          // Kategori filtreleri
-          Container(
-            height: 60,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              itemCount: _categories.length,
-              itemBuilder: (context, index) {
-                final category = _categories[index];
-                final isSelected = category == _selectedCategory;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: FilterChip(
-                    label: Text(category),
-                    selected: isSelected,
-                    onSelected: (selected) {
-                      setState(() {
-                        _selectedCategory = category;
-                      });
-                    },
-                    selectedColor: const Color(0xFF2D3E50),
-                    labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : Colors.black87,
+      body: _documents.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.folder_open,
+                    size: 80,
+                    color: AppColors.grey,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Henüz dosya yok',
+                    style: TextStyle(
+                      fontSize: 20,
+                      color: AppColors.grey,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                );
-              },
-            ),
-          ),
-          
-          // Belge listesi
-          Expanded(
-            child: _filteredDocuments.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                  const SizedBox(height: 8),
+                  Text(
+                    'Dosya eklemek için + butonuna tıklayın',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: AppColors.grey,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _documents.length,
+              itemBuilder: (context, index) {
+                final file = _documents[index];
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: ListTile(
+                    leading: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: _getFileTypeColor(file.type),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        _getFileTypeIcon(file.type),
+                        color: AppColors.white,
+                        size: 24,
+                      ),
+                    ),
+                    title: Text(
+                      file.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primaryBlue,
+                      ),
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.folder_open, size: 64, color: Colors.grey[400]),
-                        const SizedBox(height: 16),
                         Text(
-                          'Bu kategoride belge yok',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.grey[600],
+                          '${file.type} • ${file.size}',
+                          style: const TextStyle(
+                            color: AppColors.grey,
+                            fontSize: 12,
+                          ),
+                        ),
+                        Text(
+                          'Yüklenme: ${_formatDate(file.uploadDate)}',
+                          style: const TextStyle(
+                            color: AppColors.grey,
+                            fontSize: 12,
                           ),
                         ),
                       ],
                     ),
-                  )
-                : ListView.builder(
-                    itemCount: _filteredDocuments.length,
-                    itemBuilder: (context, index) {
-                      final document = _filteredDocuments[index];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                        child: ListTile(
-                          leading: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: document.color.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(document.icon, color: document.color),
-                          ),
-                          title: Text(
-                            document.name,
-                            style: const TextStyle(fontWeight: FontWeight.w500),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                    trailing: PopupMenuButton(
+                      icon: const Icon(Icons.more_vert),
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: 'view',
+                          child: Row(
                             children: [
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Text(
-                                    '${document.type} • ${document.size}',
-                                    style: TextStyle(color: Colors.grey[600]),
-                                  ),
-                                  const Spacer(),
-                                  Text(
-                                    '${document.dateModified.day}/${document.dateModified.month}/${document.dateModified.year}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 2),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[200],
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  document.category,
-                                  style: const TextStyle(fontSize: 11),
-                                ),
-                              ),
+                              Icon(Icons.visibility),
+                              SizedBox(width: 8),
+                              Text('Görüntüle'),
                             ],
                           ),
-                          trailing: PopupMenuButton(
-                            itemBuilder: (context) => [
-                              const PopupMenuItem(
-                                value: 'open',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.open_in_new),
-                                    SizedBox(width: 8),
-                                    Text('Aç'),
-                                  ],
-                                ),
-                              ),
-                              const PopupMenuItem(
-                                value: 'share',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.share),
-                                    SizedBox(width: 8),
-                                    Text('Paylaş'),
-                                  ],
-                                ),
-                              ),
-                              const PopupMenuItem(
-                                value: 'delete',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.delete, color: Colors.red),
-                                    SizedBox(width: 8),
-                                    Text('Sil', style: TextStyle(color: Colors.red)),
-                                  ],
-                                ),
-                              ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'share',
+                          child: Row(
+                            children: [
+                              Icon(Icons.share),
+                              SizedBox(width: 8),
+                              Text('Paylaş'),
                             ],
-                            onSelected: (value) {
-                              switch (value) {
-                                case 'open':
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('${document.name} açılıyor...')),
-                                  );
-                                  break;
-                                case 'share':
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('${document.name} paylaşılıyor...')),
-                                  );
-                                  break;
-                                case 'delete':
-                                  setState(() {
-                                    _documents.remove(document);
-                                  });
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Belge silindi')),
-                                  );
-                                  break;
-                              }
-                            },
                           ),
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('${document.name} açılıyor...')),
-                            );
-                          },
+                        ),
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete, color: Colors.red),
+                              SizedBox(width: 8),
+                              Text('Sil', style: TextStyle(color: Colors.red)),
+                            ],
+                          ),
+                        ),
+                      ],
+                      onSelected: (value) {
+                        switch (value) {
+                          case 'view':
+                            // Dosya görüntüleme
+                            break;
+                          case 'share':
+                            // Dosya paylaşma
+                            break;
+                          case 'delete':
+                            _deleteFile(index);
+                            break;
+                        }
+                      },
+                    ),
+                    onTap: () {
+                      // Dosya detayları
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('${file.name} açılıyor...'),
+                          backgroundColor: AppColors.primaryBlue,
                         ),
                       );
                     },
                   ),
-          ),
-        ],
-      ),
+                );
+              },
+            ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _showAddDocumentDialog,
-        backgroundColor: const Color(0xFF2D3E50),
+        onPressed: () {
+          // Dosya ekleme
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Dosya ekleme özelliği yakında gelecek'),
+              backgroundColor: AppColors.primaryBlue,
+            ),
+          );
+        },
+        backgroundColor: AppColors.primaryYellow,
+        foregroundColor: AppColors.primaryBlue,
         child: const Icon(Icons.add),
       ),
     );
   }
+
+  Color _getFileTypeColor(String type) {
+    switch (type) {
+      case 'PDF':
+        return Colors.red;
+      case 'DOCX':
+      case 'DOC':
+        return Colors.blue;
+      case 'TXT':
+        return Colors.grey;
+      case 'JPG':
+      case 'PNG':
+        return Colors.green;
+      default:
+        return AppColors.primaryBlue;
+    }
+  }
+
+  IconData _getFileTypeIcon(String type) {
+    switch (type) {
+      case 'PDF':
+        return Icons.picture_as_pdf;
+      case 'DOCX':
+      case 'DOC':
+        return Icons.description;
+      case 'TXT':
+        return Icons.text_snippet;
+      case 'JPG':
+      case 'PNG':
+        return Icons.image;
+      default:
+        return Icons.insert_drive_file;
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inDays == 0) {
+      return 'Bugün';
+    } else if (difference.inDays == 1) {
+      return 'Dün';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} gün önce';
+    } else {
+      return '${date.day}/${date.month}/${date.year}';
+    }
+  }
 }
 
-class DocumentItem {
+class FileItem {
   final String name;
   final String type;
   final String size;
-  final String category;
-  final DateTime dateModified;
-  final IconData icon;
-  final Color color;
+  final DateTime uploadDate;
 
-  DocumentItem({
-    required this.name,
-    required this.type,
-    required this.size,
-    required this.category,
-    required this.dateModified,
-    required this.icon,
-    required this.color,
-  });
-}
+  FileItem(this.name, this.type, this.size, this.uploadDate);
+} 

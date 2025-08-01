@@ -7,8 +7,12 @@ import 'files_screen.dart';
 import 'lawyer_contact_screen.dart';
 import 'documents_screen.dart';
 import 'calendar_screen.dart';
+import 'settings_screen.dart';
+import '../constants/app_colors.dart';
 
 class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
@@ -50,26 +54,48 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6F8), // Light grey background
+      backgroundColor: AppColors.backgroundColor,
       body: Column(
         children: [
           // Header
           Container(
             width: double.infinity,
-            color: const Color(0xFF2D3E50),
+            decoration: const BoxDecoration(
+              gradient: AppColors.primaryGradient,
+            ),
             child: SafeArea(
               bottom: false,
               child: Padding(
-                padding: const EdgeInsets.only(left: 24.0, right: 24.0, top: 20.0, bottom: 24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                padding: const EdgeInsets.only(
+                  left: 24.0,
+                  right: 24.0,
+                  top: 20.0,
+                  bottom: 24.0,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
                       'Hukuki Asistan',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: AppColors.white,
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const SettingsScreen(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(
+                        Icons.settings,
+                        color: AppColors.primaryYellow,
+                        size: 28,
                       ),
                     ),
                   ],
@@ -86,7 +112,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   context,
                   icon: FontAwesomeIcons.robot,
                   title: "AI'ye Sor",
-                  subtitle: "Hukuki sorularınızı yazın ve\nyapay zekadan yanıt alın",
+                  subtitle:
+                      "Hukuki sorularınızı yazın ve\nyapay zekadan yanıt alın",
                   hasInput: true,
                   onTap: () {
                     Navigator.push(
@@ -100,11 +127,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   context,
                   icon: FontAwesomeIcons.phone,
                   title: "Avukatla İletişime Geç",
-                  subtitle: "Bir avukatla iletişime geçin\nveya bir randevu ayarlayın",
+                  subtitle:
+                      "Bir avukatla iletişime geçin\nveya bir randevu ayarlayın",
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => LawyerContactScreen()),
+                      MaterialPageRoute(
+                        builder: (context) => LawyerContactScreen(),
+                      ),
                     );
                   },
                 ),
@@ -117,7 +147,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => DocumentsScreen()),
+                      MaterialPageRoute(
+                        builder: (context) => DocumentsScreen(),
+                      ),
                     );
                   },
                 ),
@@ -126,7 +158,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   context,
                   icon: FontAwesomeIcons.calendarDays,
                   title: "Takvim",
-                  subtitle: "Duruşmalar ve randevular için\ntakviminizi yönetin",
+                  subtitle:
+                      "Duruşmalar ve randevular için\ntakviminizi yönetin",
                   onTap: () {
                     Navigator.push(
                       context,
@@ -142,10 +175,10 @@ class _HomeScreenState extends State<HomeScreen> {
       // Bottom Navigation Bar
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.cardBackground,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: AppColors.primaryBlue.withOpacity(0.1),
               spreadRadius: 0,
               blurRadius: 10,
               offset: const Offset(0, -2),
@@ -184,11 +217,11 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Container(
         padding: const EdgeInsets.all(20.0),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.cardBackground,
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: AppColors.primaryBlue.withOpacity(0.1),
               spreadRadius: 1,
               blurRadius: 10,
               offset: const Offset(0, 4),
@@ -197,11 +230,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         child: Row(
           children: [
-            Icon(
-              icon,
-              color: const Color(0xFF2D3E50),
-              size: 32,
-            ),
+            Icon(icon, color: AppColors.primaryBlue, size: 32),
             const SizedBox(width: 20),
             Expanded(
               child: Column(
@@ -212,40 +241,43 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF2D3E50),
+                      color: AppColors.primaryBlue,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     subtitle,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 14,
-                      color: Colors.grey[600],
+                      color: AppColors.grey,
                       height: 1.3,
                     ),
                   ),
                   if (hasInput) ...[
                     const SizedBox(height: 16),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       decoration: BoxDecoration(
-                        color: Colors.grey[100],
+                        color: AppColors.surfaceBackground,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
                         children: [
                           Expanded(
-                            child: Text(
+                            child: const Text(
                               "Mesajınızı yazın...",
                               style: TextStyle(
-                                color: Colors.grey[500],
+                                color: AppColors.grey,
                                 fontSize: 14,
                               ),
                             ),
                           ),
-                          Icon(
+                          const Icon(
                             Icons.arrow_forward,
-                            color: Colors.grey[500],
+                            color: AppColors.grey,
                             size: 20,
                           ),
                         ],
@@ -266,7 +298,7 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: () => _onItemTapped(index),
       child: Icon(
         icon,
-        color: _selectedIndex == index ? const Color(0xFF2D3E50) : Colors.grey[400],
+        color: _selectedIndex == index ? AppColors.primaryBlue : AppColors.grey,
         size: 30,
       ),
     );

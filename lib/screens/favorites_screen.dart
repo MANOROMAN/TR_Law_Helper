@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/app_colors.dart';
 
 class FavoritesScreen extends StatefulWidget {
   @override
@@ -6,33 +7,40 @@ class FavoritesScreen extends StatefulWidget {
 }
 
 class _FavoritesScreenState extends State<FavoritesScreen> {
-  List<FavoriteItem> _favorites = [
-    FavoriteItem(
-      title: 'Boşanma Davası Süreci',
-      description: 'Boşanma davası nasıl açılır ve süreç nasıl işler?',
-      category: 'Aile Hukuku',
-      dateAdded: DateTime.now().subtract(Duration(days: 2)),
-    ),
-    FavoriteItem(
-      title: 'İş Akdi Feshi',
-      description: 'İş akdinin feshi ve işçi hakları hakkında bilgiler',
-      category: 'İş Hukuku',
-      dateAdded: DateTime.now().subtract(Duration(days: 5)),
-    ),
-    FavoriteItem(
-      title: 'Miras Paylaşımı',
-      description: 'Yasal mirasçılar ve miras paylaşım kuralları',
-      category: 'Miras Hukuku',
-      dateAdded: DateTime.now().subtract(Duration(days: 7)),
-    ),
-  ];
+  List<FavoriteItem> _favorites = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSampleFavorites();
+  }
+
+  void _loadSampleFavorites() {
+    _favorites = [
+      FavoriteItem('Boşanma Davası', 'Aile Hukuku', Icons.family_restroom),
+      FavoriteItem('Miras Hukuku', 'Miras Hukuku', Icons.account_balance),
+      FavoriteItem('İş Hukuku', 'İş Hukuku', Icons.work),
+      FavoriteItem('Ceza Hukuku', 'Ceza Hukuku', Icons.gavel),
+    ];
+  }
 
   void _removeFavorite(int index) {
     setState(() {
       _favorites.removeAt(index);
     });
+
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Favorilerden kaldırıldı')),
+      SnackBar(
+        content: const Text('Favorilerden kaldırıldı'),
+        backgroundColor: AppColors.primaryBlue,
+        action: SnackBarAction(
+          label: 'Geri Al',
+          textColor: AppColors.white,
+          onPressed: () {
+            // Geri alma işlemi
+          },
+        ),
+      ),
     );
   }
 
@@ -41,120 +49,82 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Favorilerim'),
-        backgroundColor: const Color(0xFF2D3E50),
+        backgroundColor: AppColors.primaryBlue,
+        foregroundColor: AppColors.white,
+        iconTheme: const IconThemeData(color: AppColors.primaryYellow),
       ),
       body: _favorites.isEmpty
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.favorite_border, size: 64, color: Colors.grey[400]),
+                  Icon(Icons.favorite_border, size: 80, color: AppColors.grey),
                   const SizedBox(height: 16),
                   Text(
-                    'Henüz favori eklenmemiş',
+                    'Henüz favori yok',
                     style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.grey[600],
+                      fontSize: 20,
+                      color: AppColors.grey,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Beğendiğiniz konuları favorilere ekleyin',
-                    style: TextStyle(color: Colors.grey[500]),
+                    'Favori hukuki dosyalarınızı burada görebilirsiniz',
+                    style: TextStyle(fontSize: 16, color: AppColors.grey),
                   ),
                 ],
               ),
             )
           : ListView.builder(
+              padding: const EdgeInsets.all(16),
               itemCount: _favorites.length,
               itemBuilder: (context, index) {
                 final favorite = _favorites[index];
                 return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  margin: const EdgeInsets.only(bottom: 12),
                   child: ListTile(
                     leading: Container(
-                      padding: const EdgeInsets.all(8),
+                      width: 50,
+                      height: 50,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF2D3E50),
+                        color: AppColors.primaryBlue,
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(Icons.favorite, color: Colors.white),
+                      child: Icon(
+                        favorite.icon,
+                        color: AppColors.white,
+                        size: 24,
+                      ),
                     ),
                     title: Text(
                       favorite.title,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primaryBlue,
+                      ),
                     ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 4),
-                        Text(favorite.description),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.blue[100],
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                favorite.category,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.blue[800],
-                                ),
-                              ),
-                            ),
-                            const Spacer(),
-                            Text(
-                              '${favorite.dateAdded.day}/${favorite.dateAdded.month}/${favorite.dateAdded.year}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                    subtitle: Text(
+                      favorite.category,
+                      style: const TextStyle(
+                        color: AppColors.grey,
+                        fontSize: 12,
+                      ),
                     ),
-                    trailing: PopupMenuButton(
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: 'share',
-                          child: Row(
-                            children: [
-                              Icon(Icons.share),
-                              SizedBox(width: 8),
-                              Text('Paylaş'),
-                            ],
-                          ),
-                        ),
-                        const PopupMenuItem(
-                          value: 'remove',
-                          child: Row(
-                            children: [
-                              Icon(Icons.delete, color: Colors.red),
-                              SizedBox(width: 8),
-                              Text('Kaldır', style: TextStyle(color: Colors.red)),
-                            ],
-                          ),
-                        ),
-                      ],
-                      onSelected: (value) {
-                        if (value == 'remove') {
-                          _removeFavorite(index);
-                        } else if (value == 'share') {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('${favorite.title} paylaşıldı')),
-                          );
-                        }
-                      },
+                    trailing: IconButton(
+                      icon: const Icon(
+                        Icons.favorite,
+                        color: AppColors.primaryYellow,
+                      ),
+                      onPressed: () => _removeFavorite(index),
                     ),
                     onTap: () {
-                      // Detay sayfasına git
+                      // Favori detayları
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('${favorite.title} açılıyor...')),
+                        SnackBar(
+                          content: Text('${favorite.title} açılıyor...'),
+                          backgroundColor: AppColors.primaryBlue,
+                        ),
                       );
                     },
                   ),
@@ -167,14 +137,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
 class FavoriteItem {
   final String title;
-  final String description;
   final String category;
-  final DateTime dateAdded;
+  final IconData icon;
 
-  FavoriteItem({
-    required this.title,
-    required this.description,
-    required this.category,
-    required this.dateAdded,
-  });
+  FavoriteItem(this.title, this.category, this.icon);
 }

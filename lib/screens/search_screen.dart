@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/app_colors.dart';
 
 class SearchScreen extends StatefulWidget {
   @override
@@ -51,7 +52,9 @@ class _SearchScreenState extends State<SearchScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Hukuki Arama'),
-        backgroundColor: const Color(0xFF2D3E50),
+        backgroundColor: AppColors.primaryBlue,
+        foregroundColor: AppColors.white,
+        iconTheme: const IconThemeData(color: AppColors.primaryYellow),
       ),
       body: Column(
         children: [
@@ -76,7 +79,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   borderRadius: BorderRadius.circular(25),
                 ),
                 filled: true,
-                fillColor: Colors.grey[100],
+                fillColor: AppColors.surfaceBackground,
               ),
               onChanged: _performSearch,
             ),
@@ -91,15 +94,15 @@ class _SearchScreenState extends State<SearchScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.search, size: 64, color: Colors.grey[400]),
+                            Icon(Icons.search, size: 64, color: AppColors.grey),
                             const SizedBox(height: 16),
                             Text(
                               _searchController.text.isEmpty
                                   ? 'Hukuki konularda arama yapın'
                                   : 'Sonuç bulunamadı',
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 18,
-                                color: Colors.grey[600],
+                                color: AppColors.grey,
                               ),
                             ),
                           ],
@@ -111,7 +114,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           return Card(
                             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                             child: ListTile(
-                              leading: const Icon(Icons.gavel, color: Color(0xFF2D3E50)),
+                              leading: const Icon(Icons.gavel, color: AppColors.primaryBlue),
                               title: Text(_searchResults[index]),
                               trailing: const Icon(Icons.arrow_forward_ios),
                               onTap: () {
