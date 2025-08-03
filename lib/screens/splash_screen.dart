@@ -74,147 +74,151 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.primaryBlue,
-      body: Stack(
-        children: [
-          // Blurred Background Image
-          Positioned.fill(
-            child: ClipRect(
-              child: ImageFiltered(
-                imageFilter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                child: Container(
-                  decoration: const BoxDecoration(
-                    image: DecorationImage(
-                      image: AssetImage('assets/images/lady_justice_bg.jpg'),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          // Overlay for better text readability
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                color: AppColors.primaryBlue.withOpacity(0.3),
-              ),
-            ),
-          ),
-
-          // Content
-          SafeArea(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Logo Animation
-                ScaleTransition(
-                  scale: _logoAnimation,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        child: Stack(
+          children: [
+            // Blurred Background Image
+            Positioned.fill(
+              child: ClipRect(
+                child: ImageFiltered(
+                  imageFilter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
                   child: Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(30),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.3),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.gavel,
-                      size: 60,
-                      color: AppColors.primaryYellow,
+                    decoration: const BoxDecoration(
+                      image: DecorationImage(
+                        image: AssetImage('assets/images/lady_justice_bg.png'),
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
                 ),
-
-                const SizedBox(height: 40),
-
-                // App Title
-                FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: const Text(
-                    'Hukuki Asistan',
-                    style: TextStyle(
-                      color: AppColors.white,
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
-                      shadows: [
-                        Shadow(
-                          offset: Offset(0, 2),
-                          blurRadius: 4,
-                          color: Colors.black54,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // Subtitle
-                FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: const Text(
-                    'Türk Hukuk Sistemi İçin\nAI Destekli Danışman',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.lightYellow,
-                      fontSize: 16,
-                      height: 1.5,
-                      shadows: [
-                        Shadow(
-                          offset: Offset(0, 1),
-                          blurRadius: 2,
-                          color: Colors.black54,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 80),
-
-                // Loading Indicator
-                FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: const CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      AppColors.primaryYellow,
-                    ),
-                    strokeWidth: 3,
-                  ),
-                ),
-
-                const SizedBox(height: 40),
-
-                // Version Info
-                FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: const Text(
-                    'v1.0.0',
-                    style: TextStyle(
-                      color: AppColors.lightYellow,
-                      fontSize: 14,
-                      shadows: [
-                        Shadow(
-                          offset: Offset(0, 1),
-                          blurRadius: 2,
-                          color: Colors.black54,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
-        ],
+
+            // Overlay for better text readability
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.primaryBlue.withOpacity(0.4),
+                ),
+              ),
+            ),
+
+            // Content
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Logo Animation
+                  ScaleTransition(
+                    scale: _logoAnimation,
+                    child: Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(30),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.gavel,
+                        size: 60,
+                        color: AppColors.primaryYellow,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 40),
+
+                  // App Title
+                  FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: const Text(
+                      'Hukuki Asistan',
+                      style: TextStyle(
+                        color: AppColors.white,
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.2,
+                        shadows: [
+                          Shadow(
+                            offset: Offset(0, 2),
+                            blurRadius: 4,
+                            color: Colors.black54,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Subtitle
+                  FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: const Text(
+                      'Türk Hukuk Sistemi İçin\nAI Destekli Danışman',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppColors.lightYellow,
+                        fontSize: 16,
+                        height: 1.5,
+                        shadows: [
+                          Shadow(
+                            offset: Offset(0, 1),
+                            blurRadius: 2,
+                            color: Colors.black54,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 80),
+
+                  // Loading Indicator
+                  FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: const CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        AppColors.primaryYellow,
+                      ),
+                      strokeWidth: 3,
+                    ),
+                  ),
+
+                  const SizedBox(height: 40),
+
+                  // Version Info
+                  FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: const Text(
+                      'v1.0.0',
+                      style: TextStyle(
+                        color: AppColors.lightYellow,
+                        fontSize: 14,
+                        shadows: [
+                          Shadow(
+                            offset: Offset(0, 1),
+                            blurRadius: 2,
+                            color: Colors.black54,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

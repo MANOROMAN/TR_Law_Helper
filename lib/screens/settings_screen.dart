@@ -13,6 +13,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final TextEditingController _apiKeyController = TextEditingController();
   final TextEditingController _userNameController = TextEditingController();
   bool _isLoading = false;
+  Map<String, dynamic> _stats = {};
 
   @override
   void initState() {
@@ -27,10 +28,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     final apiKey = await ConfigService.getApiKey();
     final userName = await ConfigService.getUserName();
+    final stats = await ConfigService.getDailyStats();
 
     setState(() {
       _apiKeyController.text = apiKey ?? '';
       _userNameController.text = userName ?? '';
+      _stats = stats;
       _isLoading = false;
     });
   }
@@ -232,6 +235,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 const SizedBox(height: 32),
 
+                // Kullanım İstatistikleri
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Kullanım İstatistikleri',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        _buildInfoRow(
+                          'Toplam Sohbet',
+                          '${_stats['total_chats'] ?? 0}',
+                        ),
+                        _buildInfoRow(
+                          'Bugünkü Sohbet',
+                          '${_stats['chats_today'] ?? 0}',
+                        ),
+                        _buildInfoRow(
+                          'Engellenen Mesaj',
+                          '${_stats['blocked_messages'] ?? 0}',
+                        ),
+                        if (_stats['last_chat_date'] != null)
+                          _buildInfoRow(
+                            'Son Sohbet',
+                            _formatDate(_stats['last_chat_date']),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
                 // Uygulama Bilgileri
                 Card(
                   child: Padding(
@@ -270,5 +312,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     );
+  }
+
+  String _formatDate(String dateString) {
+    try {
+      final date = DateTime.parse(dateString);
+      return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    } catch (e) {
+      return 'Bilinmiyor';
+    }
   }
 }

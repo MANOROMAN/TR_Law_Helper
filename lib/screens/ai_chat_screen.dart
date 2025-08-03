@@ -190,6 +190,16 @@ class _AIChatScreenState extends State<AIChatScreen> {
 
     try {
       final response = await _geminiService.sendMessage(userMessage);
+
+      // İstatistikleri güncelle
+      await ConfigService.incrementChatCount();
+      await ConfigService.updateLastChatDate();
+
+      // Eğer mesaj engellendiyse istatistiği güncelle
+      if (response.contains('Bu tür sorulara cevap veremiyorum')) {
+        await ConfigService.incrementBlockedMessages();
+      }
+
       setState(() {
         _messages.add(ChatMessage(text: response, isUser: false));
         _isLoading = false;
