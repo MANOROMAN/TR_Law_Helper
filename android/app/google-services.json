@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "983536019672",
+    "project_id": "lawhelper-256df",
+    "storage_bucket": "lawhelper-256df.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:983536019672:android:2773249a1a07f559ea0fad",
+        "android_client_info": {
+          "package_name": "com.example.hukuki_asistan"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "123456789012-abcdefghijklmnop.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBlFpHEDP_plFzByGAoHxJd25QSKpPoSsY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "123456789012-abcdefghijklmnop.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

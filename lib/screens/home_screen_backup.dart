@@ -23,9 +23,9 @@ class _HomeScreenState extends State<HomeScreen> {
   // Her sekme için widget listesi
   final List<Widget> _screens = [
     const HomeContent(), // Ana sayfa içeriği
-    SearchScreen(),       // Arama sayfası
-    FavoritesScreen(),    // Favoriler sayfası
-    FilesScreen(),        // Dosyalar sayfası
+    SearchScreen(), // Arama sayfası
+    FavoritesScreen(), // Favoriler sayfası
+    FilesScreen(), // Dosyalar sayfası
   ];
 
   void _onItemTapped(int index) {
@@ -38,134 +38,60 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
-      body: _selectedIndex == 0 
-        ? Column(
-            children: [
-              // Header sadece ana sayfada göster
-              Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  gradient: AppColors.primaryGradient,
-                ),
-                child: SafeArea(
-                  bottom: false,
-                  child: Padding(
-                    padding: const EdgeInsets.only(
-                      left: 24.0,
-                      right: 24.0,
-                      top: 20.0,
-                      bottom: 24.0,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Hukuki Asistan',
-                          style: TextStyle(
-                            color: AppColors.white,
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
+      body: _selectedIndex == 0
+          ? Column(
+              children: [
+                // Header sadece ana sayfada göster
+                Container(
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    gradient: AppColors.primaryGradient,
+                  ),
+                  child: SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.only(
+                        left: 24.0,
+                        right: 24.0,
+                        top: 20.0,
+                        bottom: 24.0,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Hukuki Asistan',
+                            style: TextStyle(
+                              color: AppColors.white,
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        IconButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const SettingsScreen(),
-                              ),
-                            );
-                          },
-                          icon: const Icon(
-                            Icons.settings,
-                            color: AppColors.primaryYellow,
-                            size: 28,
+                          IconButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const SettingsScreen(),
+                                ),
+                              );
+                            },
+                            icon: const Icon(
+                              Icons.settings,
+                              color: AppColors.primaryYellow,
+                              size: 28,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-              // Ana sayfa içeriği
-              Expanded(child: _screens[0]),
-            ],
-          )
-        : _screens[_selectedIndex], // Diğer sayfalar için doğrudan widget'ı göster
-                  ],
-                ),
-              ),
-            ),
-          ),
-          // Menu Cards List
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(20.0),
-              children: [
-                _buildMenuCard(
-                  context,
-                  icon: FontAwesomeIcons.robot,
-                  title: "AI'ye Sor",
-                  subtitle:
-                      "Hukuki sorularınızı yazın ve\nyapay zekadan yanıt alın",
-                  hasInput: true,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => AIChatScreen()),
-                    );
-                  },
-                ),
-                const SizedBox(height: 16),
-                _buildMenuCard(
-                  context,
-                  icon: FontAwesomeIcons.phone,
-                  title: "Avukatla İletişime Geç",
-                  subtitle:
-                      "Bir avukatla iletişime geçin\nveya bir randevu ayarlayın",
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => LawyerContactScreen(),
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 16),
-                _buildMenuCard(
-                  context,
-                  icon: FontAwesomeIcons.fileLines,
-                  title: "Dosyalarım",
-                  subtitle: "Belgeleri yükleyin\nve saklayın",
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => DocumentsScreen(),
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 16),
-                _buildMenuCard(
-                  context,
-                  icon: FontAwesomeIcons.calendarDays,
-                  title: "Takvim",
-                  subtitle:
-                      "Duruşmalar ve randevular için\ntakviminizi yönetin",
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => CalendarScreen()),
-                    );
-                  },
-                ),
+                // Ana sayfa içeriği
+                Expanded(child: _screens[0]),
               ],
-            ),
-          ),
-        ],
-      ),
+            )
+          : _screens[_selectedIndex], // Diğer sayfalar için doğrudan widget'ı göster
       // Bottom Navigation Bar
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -193,95 +119,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMenuCard(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    bool hasInput = false,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(20.0),
-        decoration: BoxDecoration(
-          color: AppColors.cardBackground,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primaryBlue.withOpacity(0.1),
-              spreadRadius: 1,
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: AppColors.primaryBlue, size: 32),
-            const SizedBox(width: 20),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primaryBlue,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppColors.grey,
-                      height: 1.3,
-                    ),
-                  ),
-                  if (hasInput) ...[
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceBackground,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: const Text(
-                              "Mesajınızı yazın...",
-                              style: TextStyle(
-                                color: AppColors.grey,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                          const Icon(
-                            Icons.arrow_forward,
-                            color: AppColors.grey,
-                            size: 20,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
         ),
       ),
     );
@@ -330,7 +167,8 @@ class HomeContent extends StatelessWidget {
               context,
               icon: FontAwesomeIcons.phone,
               title: "Avukatla İletişime Geç",
-              subtitle: "Bir avukatla iletişime geçin\nveya bir randevu ayarlayın",
+              subtitle:
+                  "Bir avukatla iletişime geçin\nveya bir randevu ayarlayın",
               onTap: () {
                 Navigator.push(
                   context,
@@ -349,9 +187,7 @@ class HomeContent extends StatelessWidget {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => DocumentsScreen(),
-                  ),
+                  MaterialPageRoute(builder: (context) => DocumentsScreen()),
                 );
               },
             ),
@@ -411,11 +247,7 @@ class HomeContent extends StatelessWidget {
                     color: AppColors.primaryBlue.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(
-                    icon,
-                    color: AppColors.primaryBlue,
-                    size: 24,
-                  ),
+                  child: Icon(icon, color: AppColors.primaryBlue, size: 24),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -460,10 +292,7 @@ class HomeContent extends StatelessWidget {
                     Expanded(
                       child: const Text(
                         "Mesajınızı yazın...",
-                        style: TextStyle(
-                          color: AppColors.grey,
-                          fontSize: 14,
-                        ),
+                        style: TextStyle(color: AppColors.grey, fontSize: 14),
                       ),
                     ),
                     const Icon(

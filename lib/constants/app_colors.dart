@@ -108,6 +108,7 @@ class AppColors {
   static const Color mintGreen = skyBlue; // Gökyüzü mavisi
   static const Color softMint = softBlue; // Açık mavi
   static const Color darkMint = navyBlue; // Lacivert
+  static const Color green = Color.fromARGB(255, 88, 205, 109); // Yeşil
   
   // Özel durum renkleri - mavi ve kırmızı tonlar
   static const Color success = secondaryBlue; // Başarı - mavi

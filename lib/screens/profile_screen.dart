@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/firebase_service.dart';
 import '../constants/app_colors.dart';
+import 'auth/login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -8,6 +11,55 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  final FirebaseService _firebaseService = FirebaseService();
+  User? _currentUser;
+  Map<String, dynamic>? _userProfile;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  void _loadUserData() {
+    _currentUser = _firebaseService.currentUser;
+    if (_currentUser != null) {
+      _loadUserProfile();
+    }
+  }
+
+  Future<void> _loadUserProfile() async {
+    if (_currentUser != null) {
+      final profile = await _firebaseService.getUserProfile(_currentUser!.uid);
+      if (mounted) {
+        setState(() {
+          _userProfile = profile;
+        });
+      }
+    }
+  }
+
+  Future<void> _signOut() async {
+    try {
+      await _firebaseService.signOut();
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Çıkış yapılırken hata oluştu: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -54,18 +106,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     const SizedBox(height: 16),
                     // Kullanıcı Adı
-                    const Text(
-                      'Kullanıcı Adı',
-                      style: TextStyle(
+                    Text(
+                      _userProfile != null 
+                          ? '${_userProfile!['firstName']} ${_userProfile!['lastName']}'
+                          : _currentUser?.displayName ?? 'Kullanıcı',
+                      style: const TextStyle(
                         color: AppColors.white,
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
-                      'kullanici@email.com',
-                      style: TextStyle(
+                    Text(
+                      _currentUser?.email ?? 'kullanici@email.com',
+                      style: const TextStyle(
                         color: AppColors.accentSilver,
                         fontSize: 16,
                       ),
@@ -298,8 +352,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                // Çıkış yapma işlemini burada gerçekleştir
-                // Örneğin: login sayfasına yönlendir
+                _signOut();
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.accentRed,

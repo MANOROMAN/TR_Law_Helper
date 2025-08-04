@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:io';
+import '../services/firebase_service.dart';
 import '../constants/app_colors.dart';
+import 'package:intl/intl.dart'; // Import intl package
 
 class DocumentsScreen extends StatefulWidget {
   @override
@@ -8,24 +12,67 @@ class DocumentsScreen extends StatefulWidget {
 }
 
 class _DocumentsScreenState extends State<DocumentsScreen> {
+  final FirebaseService _firebaseService = FirebaseService();
   List<Document> _documents = [];
+  bool _isLoading = true;
+  User? _currentUser;
 
   @override
   void initState() {
     super.initState();
-    _loadSampleDocuments();
+    _loadUserData();
   }
 
-  void _loadSampleDocuments() {
-    _documents = [
-      Document('Dava Dilekçesi.pdf', 'PDF', '2.3 MB', DateTime.now().subtract(const Duration(days: 2))),
-      Document('Tanık Beyanı.docx', 'DOCX', '1.1 MB', DateTime.now().subtract(const Duration(days: 5))),
-      Document('Mahkeme Kararı.pdf', 'PDF', '3.7 MB', DateTime.now().subtract(const Duration(days: 10))),
-      Document('Sözleşme.pdf', 'PDF', '1.8 MB', DateTime.now().subtract(const Duration(days: 15))),
-    ];
+  void _loadUserData() {
+    _currentUser = _firebaseService.currentUser;
+    if (_currentUser != null) {
+      _loadDocuments();
+    } else {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadDocuments() async {
+    if (_currentUser != null) {
+      try {
+        final documentsData = await _firebaseService.getUserDocuments(
+          _currentUser!.uid,
+        );
+        setState(() {
+          _documents = documentsData
+              .map((data) => Document.fromFirestore(data, data['id'] as String))
+              .toList();
+          _isLoading = false;
+        });
+      } catch (e) {
+        setState(() {
+          _isLoading = false;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Belgeler yüklenirken hata oluştu: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
   }
 
   Future<void> _pickFile() async {
+    if (_currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Kullanıcı girişi gerekli'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
@@ -34,55 +81,109 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
 
       if (result != null) {
         final file = result.files.first;
-        setState(() {
-          _documents.add(Document(
-            file.name,
-            file.extension?.toUpperCase() ?? 'UNKNOWN',
-            '${(file.size / 1024 / 1024).toStringAsFixed(1)} MB',
-            DateTime.now(),
-          ));
-        });
+        final filePath = file.path;
 
+        if (filePath != null) {
+          final fileFile = File(filePath);
+
+          // Firebase'e yükle
+          final downloadUrl = await _firebaseService.uploadDocument(
+            userId: _currentUser!.uid,
+            documentFile: fileFile,
+            documentName: file.name,
+            documentType: file.extension?.toUpperCase() ?? 'UNKNOWN',
+          );
+
+          if (downloadUrl != null) {
+            // Belgeleri yeniden yükle
+            await _loadDocuments();
+
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${file.name} başarıyla yüklendi'),
+                  backgroundColor: AppColors.primaryBlue,
+                ),
+              );
+            }
+          } else {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Dosya yüklenirken hata oluştu'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${file.name} başarıyla yüklendi'),
-            backgroundColor: AppColors.primaryBlue,
+            content: Text('Dosya yüklenirken hata oluştu: $e'),
+            backgroundColor: Colors.red,
           ),
         );
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Dosya yüklenirken hata oluştu: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
     }
   }
 
-  void _deleteDocument(Document document) {
+  Future<void> _deleteDocument(Document document) async {
+    if (_currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Kullanıcı girişi gerekli'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Dosyayı Sil'),
-        content: Text('${document.name} dosyasını silmek istediğinizden emin misiniz?'),
+        content: Text(
+          '${document.name} dosyasını silmek istediğinizden emin misiniz?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('İptal'),
           ),
           TextButton(
-            onPressed: () {
-              setState(() {
-                _documents.remove(document);
-              });
+            onPressed: () async {
               Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${document.name} silindi'),
-                  backgroundColor: AppColors.primaryBlue,
-                ),
-              );
+
+              try {
+                await _firebaseService.deleteDocument(
+                  _currentUser!.uid,
+                  document.id,
+                );
+
+                // Belgeleri yeniden yükle
+                await _loadDocuments();
+
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('${document.name} silindi'),
+                      backgroundColor: AppColors.primaryBlue,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Dosya silinirken hata oluştu: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
             },
             child: const Text('Sil', style: TextStyle(color: Colors.red)),
           ),
@@ -108,16 +209,14 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
           ),
         ],
       ),
-      body: _documents.isEmpty
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _documents.isEmpty
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.folder_open,
-                    size: 80,
-                    color: AppColors.grey,
-                  ),
+                  Icon(Icons.folder_open, size: 80, color: AppColors.grey),
                   const SizedBox(height: 16),
                   Text(
                     'Henüz dosya yok',
@@ -130,10 +229,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                   const SizedBox(height: 8),
                   Text(
                     'Dosya eklemek için + butonuna tıklayın',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: AppColors.grey,
-                    ),
+                    style: TextStyle(fontSize: 16, color: AppColors.grey),
                   ),
                 ],
               ),
@@ -266,7 +362,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
         return Colors.grey;
       case 'JPG':
       case 'PNG':
-        return AppColors.white;
+        return AppColors.green;
       default:
         return AppColors.primaryBlue;
     }
@@ -300,16 +396,38 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
     } else if (difference.inDays < 7) {
       return '${difference.inDays} gün önce';
     } else {
-      return '${date.day}/${date.month}/${date.year}';
+      return DateFormat('dd/MM/yyyy').format(date);
     }
   }
 }
 
 class Document {
+  final String id;
   final String name;
   final String type;
   final String size;
   final DateTime uploadDate;
 
-  Document(this.name, this.type, this.size, this.uploadDate);
+  Document(
+    this.name,
+    this.type,
+    this.size,
+    this.uploadDate, {
+    required this.id,
+  });
+
+  static Document fromFirestore(Map<String, dynamic> data, String id) {
+    return Document(
+      data['name'] ?? '',
+      data['type'] ?? '',
+      data['size'] ?? '',
+      (data['uploadDate'] is DateTime)
+          ? data['uploadDate']
+          : (data['uploadDate'] != null
+                ? DateTime.tryParse(data['uploadDate'].toString()) ??
+                      DateTime.now()
+                : DateTime.now()),
+      id: id,
+    );
+  }
 }

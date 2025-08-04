@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:ui';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/firebase_service.dart';
 import 'home_screen.dart';
+import 'auth/login_screen.dart';
 import '../constants/app_colors.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -17,6 +20,7 @@ class _SplashScreenState extends State<SplashScreen>
   late AnimationController _fadeController;
   late Animation<double> _logoAnimation;
   late Animation<double> _fadeAnimation;
+  final FirebaseService _firebaseService = FirebaseService();
 
   @override
   void initState() {
@@ -49,18 +53,38 @@ class _SplashScreenState extends State<SplashScreen>
     await Future.delayed(const Duration(milliseconds: 500));
     await _fadeController.forward();
 
-    // 3 saniye sonra ana sayfaya geç
+    // Firebase authentication kontrolü
     Timer(const Duration(seconds: 3), () {
+      _checkAuthState();
+    });
+  }
+
+  void _checkAuthState() {
+    User? currentUser = _firebaseService.currentUser;
+    
+    if (currentUser != null) {
+      // Kullanıcı giriş yapmış, ana sayfaya git
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) => HomeScreen(),
+          pageBuilder: (context, animation, secondaryAnimation) => const HomeScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },
           transitionDuration: const Duration(milliseconds: 800),
         ),
       );
-    });
+    } else {
+      // Kullanıcı giriş yapmamış, giriş sayfasına git
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) => const LoginScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 800),
+        ),
+      );
+    }
   }
 
   @override
