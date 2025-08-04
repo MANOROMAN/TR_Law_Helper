@@ -113,7 +113,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         title: const Text("Takvim"),
         backgroundColor: AppColors.primaryBlue,
         foregroundColor: AppColors.white,
-        iconTheme: const IconThemeData(color: AppColors.primaryYellow),
+        iconTheme: const IconThemeData(color: AppColors.white),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
@@ -156,11 +156,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 shape: BoxShape.circle,
               ),
               todayDecoration: BoxDecoration(
-                color: AppColors.primaryYellow,
+                color: AppColors.accentSteel,
                 shape: BoxShape.circle,
               ),
               markerDecoration: BoxDecoration(
-                color: AppColors.secondaryYellow,
+                color: AppColors.white,
                 shape: BoxShape.circle,
               ),
             ),
@@ -185,8 +185,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddEventDialog(),
-        backgroundColor: AppColors.primaryYellow,
-        foregroundColor: AppColors.primaryBlue,
+        backgroundColor: AppColors.accentSteel,
+        foregroundColor: AppColors.white,
         child: const Icon(Icons.add),
       ),
     );

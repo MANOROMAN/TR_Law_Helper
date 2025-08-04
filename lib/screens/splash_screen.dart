@@ -73,10 +73,20 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.primaryBlue,
       body: Container(
         width: double.infinity,
         height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppColors.primaryBlue,
+              AppColors.secondaryBlue,
+              AppColors.lightBlue,
+            ],
+          ),
+        ),
         child: Stack(
           children: [
             // Blurred Background Image
@@ -100,7 +110,7 @@ class _SplashScreenState extends State<SplashScreen>
             Positioned.fill(
               child: Container(
                 decoration: BoxDecoration(
-                  color: AppColors.primaryBlue.withOpacity(0.4),
+                  color: AppColors.primaryBlue.withOpacity(0.2),
                 ),
               ),
             ),
@@ -130,7 +140,7 @@ class _SplashScreenState extends State<SplashScreen>
                       child: const Icon(
                         Icons.gavel,
                         size: 60,
-                        color: AppColors.primaryYellow,
+                        color: AppColors.primaryBlue,
                       ),
                     ),
                   ),
@@ -167,9 +177,10 @@ class _SplashScreenState extends State<SplashScreen>
                       'Türk Hukuk Sistemi İçin\nAI Destekli Danışman',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: AppColors.lightYellow,
+                        color: AppColors.white,
                         fontSize: 16,
                         height: 1.5,
+                        fontWeight: FontWeight.w500,
                         shadows: [
                           Shadow(
                             offset: Offset(0, 1),
@@ -188,9 +199,9 @@ class _SplashScreenState extends State<SplashScreen>
                     opacity: _fadeAnimation,
                     child: const CircularProgressIndicator(
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        AppColors.primaryYellow,
+                        AppColors.white,
                       ),
-                      strokeWidth: 3,
+                      strokeWidth: 4,
                     ),
                   ),
 
@@ -202,8 +213,9 @@ class _SplashScreenState extends State<SplashScreen>
                     child: const Text(
                       'v1.0.0',
                       style: TextStyle(
-                        color: AppColors.lightYellow,
+                        color: AppColors.lightWhite,
                         fontSize: 14,
+                        fontWeight: FontWeight.w300,
                         shadows: [
                           Shadow(
                             offset: Offset(0, 1),

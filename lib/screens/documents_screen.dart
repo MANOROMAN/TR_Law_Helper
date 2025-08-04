@@ -266,7 +266,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
         return Colors.grey;
       case 'JPG':
       case 'PNG':
-        return Colors.green;
+        return AppColors.white;
       default:
         return AppColors.primaryBlue;
     }

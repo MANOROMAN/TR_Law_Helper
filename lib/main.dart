@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'screens/splash_screen.dart';
 import 'constants/app_colors.dart';
+// import 'services/notification_service.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // await NotificationService().init();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   runApp(const HukukiAsistanApp());
 }
@@ -27,9 +29,9 @@ class HukukiAsistanApp extends StatelessWidget {
         appBarTheme: const AppBarTheme(
           backgroundColor: AppColors.primaryBlue,
           foregroundColor: AppColors.white,
-          elevation: 0,
+          elevation: 1,
           centerTitle: true,
-          iconTheme: IconThemeData(color: AppColors.primaryYellow),
+          iconTheme: IconThemeData(color: AppColors.white),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
@@ -41,8 +43,8 @@ class HukukiAsistanApp extends StatelessWidget {
           ),
         ),
         floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          backgroundColor: AppColors.primaryYellow,
-          foregroundColor: AppColors.primaryBlue,
+          backgroundColor: AppColors.white,
+          foregroundColor: AppColors.white,
         ),
         inputDecorationTheme: InputDecorationTheme(
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),

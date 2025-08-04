@@ -239,7 +239,7 @@ class _FilesScreenState extends State<FilesScreen> {
         return Colors.grey;
       case 'JPG':
       case 'PNG':
-        return Colors.green;
+        return AppColors.white;
       default:
         return AppColors.primaryBlue;
     }

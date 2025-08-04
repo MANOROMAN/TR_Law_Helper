@@ -114,7 +114,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                     trailing: IconButton(
                       icon: const Icon(
                         Icons.favorite,
-                        color: AppColors.primaryYellow,
+                        color: AppColors.accentRed,
                       ),
                       onPressed: () => _removeFavorite(index),
                     ),

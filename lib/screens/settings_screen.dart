@@ -51,7 +51,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Ayarlar başarıyla kaydedildi'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColors.primaryBlue,
           ),
         );
       }
