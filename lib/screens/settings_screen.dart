@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/config_service.dart';
 import '../constants/app_colors.dart';
 
@@ -103,92 +104,214 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showApiKeyHelp() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(
-              FontAwesomeIcons.lightbulb,
-              color: AppColors.primaryBlue,
-              size: 20,
-            ),
-            const SizedBox(width: 8),
-            const Text('API Anahtarı Nasıl Alınır?'),
-          ],
-        ),
-        content: SingleChildScrollView(
+      builder: (context) => Dialog(
+        child: Container(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.9,
+            maxHeight: MediaQuery.of(context).size.height * 0.8,
+          ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'Google AI Studio\'dan ücretsiz API anahtarı alabilirsiniz:',
-                style: TextStyle(fontSize: 16),
-              ),
-              const SizedBox(height: 16),
+              // Header
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppColors.backgroundColor,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.grey.withOpacity(0.3)),
+                  color: AppColors.primaryBlue,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    topRight: Radius.circular(12),
+                  ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
                   children: [
-                    const Text(
-                      '1. Tarayıcınızda aistudio.google.com adresine gidin',
-                      style: TextStyle(fontWeight: FontWeight.w600),
+                    Icon(
+                      FontAwesomeIcons.lightbulb,
+                      color: AppColors.white,
+                      size: 20,
                     ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      '2. Google hesabınızla giriş yapın',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      '3. "Get API Key" butonuna tıklayın',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      '4. Yeni API anahtarı oluşturun',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      '5. Anahtarı kopyalayın ve buraya yapıştırın',
-                      style: TextStyle(fontWeight: FontWeight.w600),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'API Anahtarı Nasıl Alınır?',
+                        style: TextStyle(
+                          color: AppColors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
-              const Text(
-                '💡 API anahtarı AIzaSy ile başlar ve yaklaşık 39 karakter uzunluğundadır.',
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 14,
-                  fontStyle: FontStyle.italic,
+              // Content
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Google AI Studio\'dan ücretsiz API anahtarı alabilirsiniz:',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.backgroundColor,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: AppColors.grey.withOpacity(0.3),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            GestureDetector(
+                              onTap: () async {
+                                final Uri url = Uri.parse(
+                                  'https://aistudio.google.com/apikey',
+                                );
+                                if (await canLaunchUrl(url)) {
+                                  await launchUrl(
+                                    url,
+                                    mode: LaunchMode.externalApplication,
+                                  );
+                                } else {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('URL açılamadı'),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                              child: RichText(
+                                text: TextSpan(
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  children: [
+                                    const TextSpan(
+                                      text: '1. Tarayıcınızda ',
+                                      style: TextStyle(color: Colors.black87),
+                                    ),
+                                    TextSpan(
+                                      text: 'aistudio.google.com/apikey',
+                                      style: const TextStyle(
+                                        color: Colors.blue,
+                                        decoration: TextDecoration.underline,
+                                      ),
+                                    ),
+                                    const TextSpan(
+                                      text: ' adresine gidin',
+                                      style: TextStyle(color: Colors.black87),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              '2. Google hesabınızla giriş yapın',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              '3. "Get API Key" butonuna tıklayın',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              '4. Yeni API anahtarı oluşturun',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              '5. Anahtarı kopyalayın ve buraya yapıştırın',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        '💡 API anahtarı AIzaSy ile başlar ve yaklaşık 39 karakter uzunluğundadır.',
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontSize: 14,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      GestureDetector(
+                        onTap: () async {
+                          final Uri url = Uri.parse(
+                            'https://aistudio.google.com/apikey',
+                          );
+                          if (await canLaunchUrl(url)) {
+                            await launchUrl(
+                              url,
+                              mode: LaunchMode.externalApplication,
+                            );
+                          } else {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('URL açılamadı'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                        child: RichText(
+                          text: TextSpan(
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            children: [
+                              const TextSpan(
+                                text: '🌐 Site adresi: ',
+                                style: TextStyle(color: Colors.black87),
+                              ),
+                              TextSpan(
+                                text: 'aistudio.google.com/apikey',
+                                style: const TextStyle(
+                                  color: Colors.blue,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 12),
-              const Text(
-                '🌐 Site adresi: aistudio.google.com',
-                style: TextStyle(
-                  color: Colors.blue,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
+              // Actions
+              Container(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Anladım'),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Anladım'),
-          ),
-        ],
       ),
     );
   }
@@ -206,10 +329,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       appBar: AppBar(
         title: const Text(
           'Ayarlar',
-          style: TextStyle(
-            color: AppColors.white,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: AppColors.white, fontWeight: FontWeight.bold),
         ),
         backgroundColor: AppColors.primaryBlue,
         elevation: 0,
@@ -359,18 +479,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                             text: _apiKeyController.text,
                                           ),
                                         );
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
                                           const SnackBar(
-                                            content: Text('API anahtarı kopyalandı'),
-                                            backgroundColor: AppColors.primaryBlue,
+                                            content: Text(
+                                              'API anahtarı kopyalandı',
+                                            ),
+                                            backgroundColor:
+                                                AppColors.primaryBlue,
                                           ),
                                         );
                                       },
-                                      icon: const Icon(
-                                        Icons.copy,
-                                        size: 16,
-                                      ),
+                                      icon: const Icon(Icons.copy, size: 16),
                                       tooltip: 'Kopyala',
                                     )
                                   : null,
@@ -404,12 +525,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   size: 16,
                                 ),
                                 const SizedBox(width: 8),
-                                const Expanded(
-                                  child: Text(
-                                    'API anahtarını almak için Google AI Studio\'ya gidin: aistudio.google.com',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.blue,
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: () async {
+                                      final Uri url = Uri.parse(
+                                        'https://aistudio.google.com/apikey',
+                                      );
+                                      if (await canLaunchUrl(url)) {
+                                        await launchUrl(
+                                          url,
+                                          mode: LaunchMode.externalApplication,
+                                        );
+                                      } else {
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('URL açılamadı'),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    },
+                                    child: RichText(
+                                      text: TextSpan(
+                                        style: const TextStyle(fontSize: 12),
+                                        children: [
+                                          const TextSpan(
+                                            text:
+                                                'API anahtarını almak için Google AI Studio\'ya gidin: ',
+                                            style: TextStyle(
+                                              color: Colors.black87,
+                                            ),
+                                          ),
+                                          TextSpan(
+                                            text: 'aistudio.google.com/apikey',
+                                            style: const TextStyle(
+                                              color: Colors.blue,
+                                              decoration:
+                                                  TextDecoration.underline,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -439,7 +599,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             )
                           : const Icon(FontAwesomeIcons.floppyDisk, size: 16),
                       label: Text(
-                        _isLoading ? 'Kaydediliyor...' : 'API Anahtarını Kaydet',
+                        _isLoading
+                            ? 'Kaydediliyor...'
+                            : 'API Anahtarını Kaydet',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -631,17 +793,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           const SizedBox(height: 16),
                           const Text(
                             'Bu işlem tüm verilerinizi silecektir ve geri alınamaz.',
-                            style: TextStyle(
-                              color: Colors.red,
-                              fontSize: 14,
-                            ),
+                            style: TextStyle(color: Colors.red, fontSize: 14),
                           ),
                           const SizedBox(height: 12),
                           SizedBox(
                             width: double.infinity,
                             child: OutlinedButton.icon(
                               onPressed: _clearAllData,
-                              icon: const Icon(FontAwesomeIcons.trash, size: 16),
+                              icon: const Icon(
+                                FontAwesomeIcons.trash,
+                                size: 16,
+                              ),
                               label: const Text(
                                 'Tüm Verileri Sil',
                                 style: TextStyle(
@@ -651,8 +813,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: Colors.red,
-                                side: const BorderSide(color: Colors.red, width: 2),
-                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                side: const BorderSide(
+                                  color: Colors.red,
+                                  width: 2,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -683,28 +850,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
               color: color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(6),
             ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 16,
-            ),
+            child: Icon(icon, color: color, size: 16),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               label,
-              style: TextStyle(
-                color: Colors.grey.shade700,
-                fontSize: 14,
-              ),
+              style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
             ),
           ),
           Text(
             value,
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
-            ),
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
           ),
         ],
       ),
