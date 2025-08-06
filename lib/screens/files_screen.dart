@@ -1,15 +1,18 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'dart:io';
-import '../constants/app_colors.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../models/document.dart';
 import '../services/firebase_service.dart';
+import '../constants/app_colors.dart';
 
 class FilesScreen extends StatefulWidget {
+  const FilesScreen({super.key});
+
   @override
-  _FilesScreenState createState() => _FilesScreenState();
+  State<FilesScreen> createState() => _FilesScreenState();
 }
 
 class _FilesScreenState extends State<FilesScreen> {
@@ -27,13 +30,17 @@ class _FilesScreenState extends State<FilesScreen> {
     }
   }
 
-  void _loadDocuments() {
+  void _loadDocuments() async {
     if (_userId == null) return;
 
-    _firebaseService.getUserDocumentsStream(_userId!).listen((documentsData) {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final documentsData = await _firebaseService.getUserDocuments(_userId!);
       setState(() {
         _documents = documentsData.map((data) {
-          // Create a mock DocumentSnapshot for the fromFirestore method
           return Document(
             id: data['id'] ?? '',
             name: data['name'] ?? '',
@@ -47,7 +54,14 @@ class _FilesScreenState extends State<FilesScreen> {
         }).toList();
         _isLoading = false;
       });
-    });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Dosyalar yüklenirken hata oluştu: $e')),
+      );
+    }
   }
 
   Future<void> _uploadFile() async {
@@ -99,6 +113,7 @@ class _FilesScreenState extends State<FilesScreen> {
 
         if (downloadUrl != null && downloadUrl.isNotEmpty) {
           debugPrint('Dosya başarıyla yüklendi: $downloadUrl');
+          _loadDocuments(); // Reload documents
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('$fileName başarıyla yüklendi'),
@@ -121,7 +136,10 @@ class _FilesScreenState extends State<FilesScreen> {
       debugPrint('Dosya yükleme hatası: $e');
       Navigator.of(context).pop(); // Close loading dialog if open
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Hata: $e'), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text('Dosya yükleme hatası: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -133,9 +151,9 @@ class _FilesScreenState extends State<FilesScreen> {
       await _firebaseService.toggleFavorite(
         _userId!,
         document.id,
-        !document.isFavorite,
+        !document.isFavorite, // Toggle the current state
       );
-
+      _loadDocuments(); // Reload to update favorite status
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -154,41 +172,43 @@ class _FilesScreenState extends State<FilesScreen> {
   }
 
   void _deleteFile(Document document) {
+    if (_userId == null) return;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Dosyayı Sil'),
-        content: Text(
-          '${document.name} dosyasını silmek istediğinizden emin misiniz?',
-        ),
+        content: Text('${document.name} dosyasını silmek istediğinizden emin misiniz?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.pop(context),
             child: const Text('İptal'),
           ),
           TextButton(
             onPressed: () async {
-              Navigator.of(context).pop();
-              if (_userId != null) {
-                try {
+              Navigator.pop(context);
+              try {
+                if (_userId != null) {
                   await _firebaseService.deleteDocument(_userId!, document.id);
+                  _loadDocuments(); // Reload documents after deletion
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('${document.name} silindi'),
                       backgroundColor: AppColors.primaryBlue,
                     ),
                   );
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Silme hatası: $e'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
                 }
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Dosya silinemedi: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
               }
             },
-            child: const Text('Sil', style: TextStyle(color: Colors.red)),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Sil'),
           ),
         ],
       ),
@@ -198,145 +218,155 @@ class _FilesScreenState extends State<FilesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.backgroundColor,
       appBar: AppBar(
-        title: const Text('Dosyalarım'),
+        title: const Text(
+          'Belgelerim',
+          style: TextStyle(
+            color: AppColors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         backgroundColor: AppColors.primaryBlue,
-        foregroundColor: AppColors.white,
-        iconTheme: const IconThemeData(color: AppColors.primaryYellow),
+        elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.search),
             onPressed: () {
-              // Arama fonksiyonu
+              showSearch(
+                context: context,
+                delegate: DocumentSearchDelegate(_documents),
+              );
             },
-          ),
-          IconButton(
-            icon: const Icon(Icons.bug_report),
-            onPressed: () async {
-              debugPrint('Firebase Storage test başlatılıyor...');
-              bool testResult = await _firebaseService.testStorageConnection();
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      testResult
-                          ? 'Firebase Storage testi başarılı'
-                          : 'Firebase Storage testi başarısız',
-                    ),
-                    backgroundColor: testResult ? Colors.green : Colors.red,
-                  ),
-                );
-              }
-            },
+            icon: const Icon(Icons.search, color: AppColors.white),
           ),
         ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _documents.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.folder_open, size: 80, color: AppColors.grey),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Henüz dosya yok',
-                    style: TextStyle(
-                      fontSize: 20,
-                      color: AppColors.grey,
-                      fontWeight: FontWeight.w500,
-                    ),
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        FontAwesomeIcons.fileCirclePlus,
+                        size: 80,
+                        color: AppColors.grey.withOpacity(0.5),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        'Henüz belge yüklenmemiş',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: AppColors.grey.withOpacity(0.7),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'İlk belgenizi yüklemek için + butonuna tıklayın',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppColors.grey.withOpacity(0.6),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Dosya eklemek için + butonuna tıklayın',
-                    style: TextStyle(fontSize: 16, color: AppColors.grey),
-                  ),
-                ],
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _documents.length,
-              itemBuilder: (context, index) {
-                final document = _documents[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    leading: Container(
-                      width: 50,
-                      height: 50,
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _documents.length,
+                  itemBuilder: (context, index) {
+                    final document = _documents[index];
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
                       decoration: BoxDecoration(
-                        color: _getFileTypeColor(document.type),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        _getFileTypeIcon(document.type),
                         color: AppColors.white,
-                        size: 24,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.grey.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
-                    ),
-                    title: Text(
-                      document.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.primaryBlue,
-                      ),
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${document.type} • ${document.formattedSize}',
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.all(16),
+                        leading: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: _getFileTypeColor(document.type),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            _getFileTypeIcon(document.type),
+                            color: AppColors.white,
+                            size: 24,
+                          ),
+                        ),
+                        title: Text(
+                          document.name,
                           style: const TextStyle(
-                            color: AppColors.grey,
-                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        Text(
-                          'Yüklenme: ${_formatDate(document.uploadedAt)}',
-                          style: const TextStyle(
-                            color: AppColors.grey,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: Icon(
-                            document.isFavorite
-                                ? Icons.favorite
-                                : Icons.favorite_border,
-                            color: document.isFavorite
-                                ? AppColors.accentRed
-                                : AppColors.grey,
-                          ),
-                          onPressed: () => _toggleFavorite(document),
-                        ),
-                        PopupMenuButton(
-                          icon: const Icon(Icons.more_vert),
-                          itemBuilder: (context) => [
-                            const PopupMenuItem(
-                              value: 'view',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.visibility),
-                                  SizedBox(width: 8),
-                                  Text('Görüntüle'),
-                                ],
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 4),
+                            Text(
+                              '${document.type} • ${_formatFileSize(document.fileSize)}',
+                              style: TextStyle(
+                                color: AppColors.grey.withOpacity(0.7),
+                                fontSize: 12,
                               ),
                             ),
-                            const PopupMenuItem(
-                              value: 'share',
+                            const SizedBox(height: 2),
+                            Text(
+                              _formatDate(document.uploadedAt),
+                              style: TextStyle(
+                                color: AppColors.grey.withOpacity(0.6),
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                        trailing: PopupMenuButton<String>(
+                          onSelected: (value) {
+                            switch (value) {
+                              case 'favorite':
+                                _toggleFavorite(document);
+                                break;
+                              case 'delete':
+                                _deleteFile(document);
+                                break;
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            PopupMenuItem(
+                              value: 'favorite',
                               child: Row(
                                 children: [
-                                  Icon(Icons.share),
-                                  SizedBox(width: 8),
-                                  Text('Paylaş'),
+                                  Icon(
+                                    document.isFavorite
+                                        ? Icons.favorite
+                                        : Icons.favorite_border,
+                                    color: document.isFavorite
+                                        ? Colors.red
+                                        : AppColors.grey,
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    document.isFavorite
+                                        ? 'Favorilerden Çıkar'
+                                        : 'Favorilere Ekle',
+                                  ),
                                 ],
                               ),
                             ),
@@ -344,7 +374,11 @@ class _FilesScreenState extends State<FilesScreen> {
                               value: 'delete',
                               child: Row(
                                 children: [
-                                  Icon(Icons.delete, color: Colors.red),
+                                  Icon(
+                                    Icons.delete_outline,
+                                    color: Colors.red,
+                                    size: 16,
+                                  ),
                                   SizedBox(width: 8),
                                   Text(
                                     'Sil',
@@ -354,56 +388,52 @@ class _FilesScreenState extends State<FilesScreen> {
                               ),
                             ),
                           ],
-                          onSelected: (value) {
-                            switch (value) {
-                              case 'view':
-                                // Dosya görüntüleme
-                                break;
-                              case 'share':
-                                // Dosya paylaşma
-                                break;
-                              case 'delete':
-                                _deleteFile(document);
-                                break;
-                            }
-                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            child: Icon(
+                              Icons.more_vert,
+                              color: AppColors.grey.withOpacity(0.6),
+                            ),
+                          ),
                         ),
-                      ],
-                    ),
-                    onTap: () {
-                      // Dosya detayları
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('${document.name} açılıyor...'),
-                          backgroundColor: AppColors.primaryBlue,
-                        ),
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
-      floatingActionButton: FloatingActionButton(
+                        onTap: () {
+                          // Open document or show preview
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('${document.name} açılıyor...'),
+                              backgroundColor: AppColors.primaryBlue,
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: _uploadFile,
-        backgroundColor: AppColors.primaryYellow,
-        foregroundColor: AppColors.primaryBlue,
-        child: const Icon(Icons.add),
+        backgroundColor: AppColors.primaryBlue,
+        foregroundColor: AppColors.white,
+        icon: const Icon(Icons.add),
+        label: const Text(
+          'Belge Yükle',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
       ),
     );
   }
 
   Color _getFileTypeColor(String type) {
-    switch (type.toUpperCase()) {
-      case 'PDF':
+    switch (type.toLowerCase()) {
+      case 'pdf':
         return Colors.red;
-      case 'DOCX':
-      case 'DOC':
+      case 'doc':
+      case 'docx':
         return Colors.blue;
-      case 'TXT':
+      case 'txt':
         return Colors.grey;
-      case 'JPG':
-      case 'PNG':
-      case 'JPEG':
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
         return Colors.green;
       default:
         return AppColors.primaryBlue;
@@ -411,35 +441,94 @@ class _FilesScreenState extends State<FilesScreen> {
   }
 
   IconData _getFileTypeIcon(String type) {
-    switch (type.toUpperCase()) {
-      case 'PDF':
-        return Icons.picture_as_pdf;
-      case 'DOCX':
-      case 'DOC':
-        return Icons.description;
-      case 'TXT':
-        return Icons.text_snippet;
-      case 'JPG':
-      case 'PNG':
-      case 'JPEG':
-        return Icons.image;
+    switch (type.toLowerCase()) {
+      case 'pdf':
+        return FontAwesomeIcons.filePdf;
+      case 'doc':
+      case 'docx':
+        return FontAwesomeIcons.fileWord;
+      case 'txt':
+        return FontAwesomeIcons.fileLines;
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+        return FontAwesomeIcons.fileImage;
       default:
-        return Icons.insert_drive_file;
+        return FontAwesomeIcons.file;
     }
   }
 
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date);
+  String _formatFileSize(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
 
-    if (difference.inDays == 0) {
-      return 'Bugün';
-    } else if (difference.inDays == 1) {
-      return 'Dün';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} gün önce';
-    } else {
-      return '${date.day}/${date.month}/${date.year}';
+  String _formatDate(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+  }
+}
+
+class DocumentSearchDelegate extends SearchDelegate<Document?> {
+  final List<Document> documents;
+
+  DocumentSearchDelegate(this.documents);
+
+  @override
+  List<Widget> buildActions(BuildContext context) {
+    return [
+      IconButton(
+        onPressed: () {
+          query = '';
+        },
+        icon: const Icon(Icons.clear),
+      ),
+    ];
+  }
+
+  @override
+  Widget buildLeading(BuildContext context) {
+    return IconButton(
+      onPressed: () {
+        close(context, null);
+      },
+      icon: const Icon(Icons.arrow_back),
+    );
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    return _buildSearchResults();
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    return _buildSearchResults();
+  }
+
+  Widget _buildSearchResults() {
+    final filteredDocuments = documents
+        .where((doc) => doc.name.toLowerCase().contains(query.toLowerCase()))
+        .toList();
+
+    if (filteredDocuments.isEmpty) {
+      return const Center(
+        child: Text('Aradığınız belge bulunamadı'),
+      );
     }
+
+    return ListView.builder(
+      itemCount: filteredDocuments.length,
+      itemBuilder: (context, index) {
+        final document = filteredDocuments[index];
+        return ListTile(
+          title: Text(document.name),
+          subtitle: Text(document.type),
+          onTap: () {
+            close(context, document);
+          },
+        );
+      },
+    );
   }
 }

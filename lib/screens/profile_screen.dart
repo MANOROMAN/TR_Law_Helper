@@ -142,7 +142,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     title: "Kişisel Bilgiler",
                     subtitle: "Ad, soyad ve iletişim bilgilerini düzenle",
                     onTap: () {
-                      // Kişisel bilgiler sayfasına git
+                      _showPersonalInfoDialog();
                     },
                   ),
                   const SizedBox(height: 16),
@@ -152,7 +152,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     title: "Hukuki Geçmiş",
                     subtitle: "Geçmiş davalar ve hukuki işlemleriniz",
                     onTap: () {
-                      // Hukuki geçmiş sayfasına git
+                      _showLegalHistoryDialog();
                     },
                   ),
                   const SizedBox(height: 16),
@@ -162,7 +162,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     title: "Bildirim Ayarları",
                     subtitle: "Bildirimleri özelleştirin",
                     onTap: () {
-                      // Bildirim ayarları sayfasına git
+                      _showNotificationSettingsDialog();
                     },
                   ),
                   const SizedBox(height: 16),
@@ -172,7 +172,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     title: "Gizlilik & Güvenlik",
                     subtitle: "Hesap güvenliği ve gizlilik ayarları",
                     onTap: () {
-                      // Gizlilik ayarları sayfasına git
+                      _showPrivacySettingsDialog();
                     },
                   ),
                   const SizedBox(height: 16),
@@ -182,7 +182,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     title: "Yardım & Destek",
                     subtitle: "SSS, iletişim ve teknik destek",
                     onTap: () {
-                      // Yardım sayfasına git
+                      _showHelpSupportDialog();
                     },
                   ),
                   const SizedBox(height: 16),
@@ -192,7 +192,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     title: "Uygulama Hakkında",
                     subtitle: "Sürüm bilgileri ve yasal uyarılar",
                     onTap: () {
-                      // Hakkında sayfasına git
+                      _showAboutDialog();
                     },
                   ),
                   const SizedBox(height: 32),
@@ -372,6 +372,229 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         );
       },
+    );
+  }
+
+  void _showPersonalInfoDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Kişisel Bilgiler'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildInfoRow('Ad Soyad', _userProfile != null 
+                  ? '${_userProfile!['firstName']} ${_userProfile!['lastName']}'
+                  : 'Bilgi yok'),
+              _buildInfoRow('E-posta', _currentUser?.email ?? 'Bilgi yok'),
+              _buildInfoRow('Cinsiyet', _userProfile?['gender'] ?? 'Belirtilmemiş'),
+              _buildInfoRow('Yaş', _userProfile?['age']?.toString() ?? 'Belirtilmemiş'),
+              _buildInfoRow('Ülke', _userProfile?['country'] ?? 'Türkiye'),
+              _buildInfoRow('Kayıt Tarihi', _currentUser?.metadata.creationTime?.toString().split(' ')[0] ?? 'Bilgi yok'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Kapat'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLegalHistoryDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hukuki Geçmiş'),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.history, size: 64, color: AppColors.grey),
+            SizedBox(height: 16),
+            Text('Henüz hukuki geçmişiniz bulunmuyor.'),
+            SizedBox(height: 8),
+            Text('Yapacağınız danışmanlıklar ve işlemler burada görünecektir.'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Kapat'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showNotificationSettingsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Bildirim Ayarları'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SwitchListTile(
+              title: const Text('Güncellemeler'),
+              subtitle: const Text('Uygulama güncellemeleri'),
+              value: true,
+              onChanged: (value) {},
+            ),
+            SwitchListTile(
+              title: const Text('Hukuki Bildirimler'),
+              subtitle: const Text('Önemli hukuki duyurular'),
+              value: true,
+              onChanged: (value) {},
+            ),
+            SwitchListTile(
+              title: const Text('Hatırlatıcılar'),
+              subtitle: const Text('Randevu ve işlem hatırlatıcıları'),
+              value: false,
+              onChanged: (value) {},
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Kapat'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPrivacySettingsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Gizlilik & Güvenlik'),
+        content: const SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('🔐 Hesap Güvenliği', style: TextStyle(fontWeight: FontWeight.bold)),
+              SizedBox(height: 8),
+              Text('• İki faktörlü kimlik doğrulama aktif'),
+              Text('• Şifre son değiştirilme: 30 gün önce'),
+              SizedBox(height: 16),
+              Text('🛡️ Gizlilik', style: TextStyle(fontWeight: FontWeight.bold)),
+              SizedBox(height: 8),
+              Text('• Verileriniz şifrelenerek saklanır'),
+              Text('• Kişisel bilgiler üçüncü taraflarla paylaşılmaz'),
+              Text('• KVKK uyumlu veri işleme'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Kapat'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showHelpSupportDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Yardım & Destek'),
+        content: const SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('📞 İletişim', style: TextStyle(fontWeight: FontWeight.bold)),
+              SizedBox(height: 8),
+              Text('E-posta: destek@tckai.com'),
+              Text('Telefon: +90 (312) 123-4567'),
+              SizedBox(height: 16),
+              Text('❓ Sık Sorulan Sorular', style: TextStyle(fontWeight: FontWeight.bold)),
+              SizedBox(height: 8),
+              Text('• TCK AI nasıl kullanılır?'),
+              Text('• Hukuki danışmanlık ücretsiz mi?'),
+              Text('• Belgelerim güvende mi?'),
+              SizedBox(height: 16),
+              Text('🕐 Destek Saatleri', style: TextStyle(fontWeight: FontWeight.bold)),
+              SizedBox(height: 8),
+              Text('Pazartesi - Cuma: 09:00 - 18:00'),
+              Text('Cumartesi: 10:00 - 16:00'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Kapat'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAboutDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Uygulama Hakkında'),
+        content: const SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('📱 TCK AI', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              Text('Sürüm: 1.0.0'),
+              SizedBox(height: 16),
+              Text('📜 Açıklama', style: TextStyle(fontWeight: FontWeight.bold)),
+              SizedBox(height: 8),
+              Text('Türk Ceza Kanunu odaklı yapay zeka destekli hukuki danışmanlık uygulaması.'),
+              SizedBox(height: 16),
+              Text('⚖️ Yasal Uyarı', style: TextStyle(fontWeight: FontWeight.bold)),
+              SizedBox(height: 8),
+              Text('Bu uygulama genel bilgi amaçlıdır. Kesin hukuki tavsiye için avukata danışın.'),
+              SizedBox(height: 16),
+              Text('👨‍💻 Geliştirici', style: TextStyle(fontWeight: FontWeight.bold)),
+              SizedBox(height: 8),
+              Text('© 2024 TCK AI Takımı'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Kapat'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(
+              '$label:',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          Expanded(
+            child: Text(value),
+          ),
+        ],
+      ),
     );
   }
 }
