@@ -8,12 +8,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:hukuki_asistan/main.dart';
+import 'package:tckai/main.dart';
 
 void main() {
   testWidgets('Hukuki Asistan app test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(HukukiAsistanApp());
+    await tester.pumpWidget(const TCKAIApp());
 
     // Verify that home screen elements are present
     expect(find.text('Hukuki Asistan'), findsOneWidget);

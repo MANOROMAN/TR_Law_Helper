@@ -4,47 +4,74 @@ class Document {
   final String id;
   final String name;
   final String type;
-  final String size;
-  final DateTime uploadDate;
-  final String downloadURL;
+  final String url;
+  final int fileSize;
+  final DateTime uploadedAt;
+  final bool isFavorite;
+  final String userId;
 
   Document({
     required this.id,
     required this.name,
     required this.type,
-    required this.size,
-    required this.uploadDate,
-    required this.downloadURL,
+    required this.url,
+    required this.fileSize,
+    required this.uploadedAt,
+    this.isFavorite = false,
+    required this.userId,
   });
 
-  // Firestore'dan veri oluşturma
-  factory Document.fromFirestore(Map<String, dynamic> data, String id) {
+  factory Document.fromFirestore(DocumentSnapshot doc) {
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
     return Document(
-      id: id,
-      name: data['name'] ?? 'Unknown',
-      type: data['type'] ?? 'Unknown',
-      size: data['size'] ?? 'Unknown',
-      uploadDate: (data['uploadDate'] as Timestamp).toDate(),
-      downloadURL: data['downloadURL'] ?? 'Unknown',
+      id: doc.id,
+      name: data['name'] ?? '',
+      type: data['type'] ?? '',
+      url: data['url'] ?? '',
+      fileSize: data['fileSize'] ?? 0,
+      uploadedAt: (data['uploadedAt'] as Timestamp).toDate(),
+      isFavorite: data['isFavorite'] ?? false,
+      userId: data['userId'] ?? '',
     );
   }
 
-  // Firestore'a veri gönderme
-  Map<String, dynamic> toFirestore() {
+  Map<String, dynamic> toMap() {
     return {
       'name': name,
       'type': type,
-      'size': size,
-      'uploadDate': uploadDate,
-      'downloadURL': downloadURL,
+      'url': url,
+      'fileSize': fileSize,
+      'uploadedAt': Timestamp.fromDate(uploadedAt),
+      'isFavorite': isFavorite,
+      'userId': userId,
     };
   }
 
-  // Dosya boyutunu formatlama
-  String get formattedFileSize {
-    int fileSize = int.tryParse(size) ?? 0;
+  Document copyWith({
+    String? id,
+    String? name,
+    String? type,
+    String? url,
+    int? fileSize,
+    DateTime? uploadedAt,
+    bool? isFavorite,
+    String? userId,
+  }) {
+    return Document(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      type: type ?? this.type,
+      url: url ?? this.url,
+      fileSize: fileSize ?? this.fileSize,
+      uploadedAt: uploadedAt ?? this.uploadedAt,
+      isFavorite: isFavorite ?? this.isFavorite,
+      userId: userId ?? this.userId,
+    );
+  }
+
+  String get formattedSize {
     if (fileSize < 1024) {
-      return '${fileSize} B';
+      return '$fileSize B';
     } else if (fileSize < 1024 * 1024) {
       return '${(fileSize / 1024).toStringAsFixed(1)} KB';
     } else {
@@ -52,93 +79,7 @@ class Document {
     }
   }
 
-  // Dosya uzantısını alma
   String get fileExtension {
-    List<String> parts = name.split('.');
-    return parts.length > 1 ? parts.last.toLowerCase() : '';
+    return type.toUpperCase();
   }
-
-  // Dosya tipini belirleme
-  String get fileTypeIcon {
-    switch (fileExtension) {
-      case 'pdf':
-        return '📄';
-      case 'doc':
-      case 'docx':
-        return '📝';
-      case 'jpg':
-      case 'jpeg':
-      case 'png':
-      case 'gif':
-        return '🖼️';
-      case 'mp4':
-      case 'avi':
-      case 'mov':
-        return '🎥';
-      case 'mp3':
-      case 'wav':
-        return '🎵';
-      default:
-        return '📎';
-    }
-  }
-
-  // Dosya tipini Türkçe olarak alma
-  String get fileTypeName {
-    switch (fileExtension) {
-      case 'pdf':
-        return 'PDF Belgesi';
-      case 'doc':
-      case 'docx':
-        return 'Word Belgesi';
-      case 'jpg':
-      case 'jpeg':
-      case 'png':
-      case 'gif':
-        return 'Resim';
-      case 'mp4':
-      case 'avi':
-      case 'mov':
-        return 'Video';
-      case 'mp3':
-      case 'wav':
-        return 'Ses Dosyası';
-      default:
-        return 'Dosya';
-    }
-  }
-
-  // Yüklenme tarihini formatlama
-  String get formattedUploadDate {
-    DateTime now = DateTime.now();
-    Duration difference = now.difference(uploadDate);
-
-    if (difference.inDays == 0) {
-      if (difference.inHours == 0) {
-        return '${difference.inMinutes} dakika önce';
-      } else {
-        return '${difference.inHours} saat önce';
-      }
-    } else if (difference.inDays == 1) {
-      return 'Dün';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} gün önce';
-    } else {
-      return '${uploadDate.day}/${uploadDate.month}/${uploadDate.year}';
-    }
-  }
-
-  @override
-  String toString() {
-    return 'Document(id: $id, name: $name, type: $type, size: $size)';
-  }
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    return other is Document && other.id == id;
-  }
-
-  @override
-  int get hashCode => id.hashCode;
 }

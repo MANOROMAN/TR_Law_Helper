@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:io';
 import '../constants/app_colors.dart';
+import '../models/document.dart';
+import '../services/firebase_service.dart';
 
 class FilesScreen extends StatefulWidget {
   @override
@@ -7,47 +13,180 @@ class FilesScreen extends StatefulWidget {
 }
 
 class _FilesScreenState extends State<FilesScreen> {
-  List<FileItem> _documents = [];
+  final FirebaseService _firebaseService = FirebaseService();
+  List<Document> _documents = [];
+  bool _isLoading = true;
+  String? _userId;
 
   @override
   void initState() {
     super.initState();
-    _loadSampleFiles();
+    _userId = FirebaseAuth.instance.currentUser?.uid;
+    if (_userId != null) {
+      _loadDocuments();
+    }
   }
 
-  void _loadSampleFiles() {
-    _documents = [
-      FileItem('Dava Dilekçesi.pdf', 'PDF', '2.3 MB', DateTime.now().subtract(const Duration(days: 2))),
-      FileItem('Tanık Beyanı.docx', 'DOCX', '1.1 MB', DateTime.now().subtract(const Duration(days: 5))),
-      FileItem('Mahkeme Kararı.pdf', 'PDF', '3.7 MB', DateTime.now().subtract(const Duration(days: 10))),
-      FileItem('Sözleşme.pdf', 'PDF', '1.8 MB', DateTime.now().subtract(const Duration(days: 15))),
-    ];
+  void _loadDocuments() {
+    if (_userId == null) return;
+
+    _firebaseService.getUserDocumentsStream(_userId!).listen((documentsData) {
+      setState(() {
+        _documents = documentsData.map((data) {
+          // Create a mock DocumentSnapshot for the fromFirestore method
+          return Document(
+            id: data['id'] ?? '',
+            name: data['name'] ?? '',
+            type: data['type'] ?? '',
+            url: data['url'] ?? '',
+            fileSize: data['fileSize'] ?? 0,
+            uploadedAt: (data['uploadedAt'] as Timestamp).toDate(),
+            isFavorite: data['isFavorite'] ?? false,
+            userId: data['userId'] ?? '',
+          );
+        }).toList();
+        _isLoading = false;
+      });
+    });
   }
 
-  void _deleteFile(int index) {
-    final file = _documents[index];
+  Future<void> _uploadFile() async {
+    if (_userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Lütfen önce giriş yapın'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    try {
+      debugPrint('Dosya seçimi başlatılıyor...');
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'jpg', 'jpeg', 'png'],
+        allowMultiple: false,
+      );
+
+      if (result != null) {
+        debugPrint('Dosya seçildi: ${result.files.single.name}');
+        File file = File(result.files.single.path!);
+        String fileName = result.files.single.name;
+        String fileExtension = fileName.split('.').last.toLowerCase();
+
+        debugPrint('Dosya yolu: ${file.path}');
+        debugPrint('Dosya var mı: ${await file.exists()}');
+        debugPrint('Dosya boyutu: ${await file.length()} bytes');
+
+        // Show loading dialog
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) =>
+              const Center(child: CircularProgressIndicator()),
+        );
+
+        debugPrint('Firebase service çağrılıyor...');
+        String? downloadUrl = await _firebaseService.uploadDocument(
+          userId: _userId!,
+          documentFile: file,
+          documentName: fileName,
+          documentType: fileExtension.toUpperCase(),
+        );
+
+        Navigator.of(context).pop(); // Close loading dialog
+
+        if (downloadUrl != null && downloadUrl.isNotEmpty) {
+          debugPrint('Dosya başarıyla yüklendi: $downloadUrl');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('$fileName başarıyla yüklendi'),
+              backgroundColor: AppColors.primaryBlue,
+            ),
+          );
+        } else {
+          debugPrint('Dosya yükleme başarısız - downloadUrl null veya boş');
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Dosya yükleme başarısız'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } else {
+        debugPrint('Dosya seçimi iptal edildi');
+      }
+    } catch (e) {
+      debugPrint('Dosya yükleme hatası: $e');
+      Navigator.of(context).pop(); // Close loading dialog if open
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Hata: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  Future<void> _toggleFavorite(Document document) async {
+    if (_userId == null) return;
+
+    try {
+      await _firebaseService.toggleFavorite(
+        _userId!,
+        document.id,
+        !document.isFavorite,
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            document.isFavorite
+                ? '${document.name} favorilerden çıkarıldı'
+                : '${document.name} favorilere eklendi',
+          ),
+          backgroundColor: AppColors.primaryBlue,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Hata: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  void _deleteFile(Document document) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Dosyayı Sil'),
-        content: Text('${file.name} dosyasını silmek istediğinizden emin misiniz?'),
+        content: Text(
+          '${document.name} dosyasını silmek istediğinizden emin misiniz?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('İptal'),
           ),
           TextButton(
-            onPressed: () {
-              setState(() {
-                _documents.removeAt(index);
-              });
+            onPressed: () async {
               Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${file.name} silindi'),
-                  backgroundColor: AppColors.primaryBlue,
-                ),
-              );
+              if (_userId != null) {
+                try {
+                  await _firebaseService.deleteDocument(_userId!, document.id);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('${document.name} silindi'),
+                      backgroundColor: AppColors.primaryBlue,
+                    ),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Silme hatası: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
             },
             child: const Text('Sil', style: TextStyle(color: Colors.red)),
           ),
@@ -60,7 +199,7 @@ class _FilesScreenState extends State<FilesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Dosyalar'),
+        title: const Text('Dosyalarım'),
         backgroundColor: AppColors.primaryBlue,
         foregroundColor: AppColors.white,
         iconTheme: const IconThemeData(color: AppColors.primaryYellow),
@@ -71,18 +210,35 @@ class _FilesScreenState extends State<FilesScreen> {
               // Arama fonksiyonu
             },
           ),
+          IconButton(
+            icon: const Icon(Icons.bug_report),
+            onPressed: () async {
+              debugPrint('Firebase Storage test başlatılıyor...');
+              bool testResult = await _firebaseService.testStorageConnection();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      testResult
+                          ? 'Firebase Storage testi başarılı'
+                          : 'Firebase Storage testi başarısız',
+                    ),
+                    backgroundColor: testResult ? Colors.green : Colors.red,
+                  ),
+                );
+              }
+            },
+          ),
         ],
       ),
-      body: _documents.isEmpty
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _documents.isEmpty
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.folder_open,
-                    size: 80,
-                    color: AppColors.grey,
-                  ),
+                  Icon(Icons.folder_open, size: 80, color: AppColors.grey),
                   const SizedBox(height: 16),
                   Text(
                     'Henüz dosya yok',
@@ -95,10 +251,7 @@ class _FilesScreenState extends State<FilesScreen> {
                   const SizedBox(height: 8),
                   Text(
                     'Dosya eklemek için + butonuna tıklayın',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: AppColors.grey,
-                    ),
+                    style: TextStyle(fontSize: 16, color: AppColors.grey),
                   ),
                 ],
               ),
@@ -107,7 +260,7 @@ class _FilesScreenState extends State<FilesScreen> {
               padding: const EdgeInsets.all(16),
               itemCount: _documents.length,
               itemBuilder: (context, index) {
-                final file = _documents[index];
+                final document = _documents[index];
                 return Card(
                   margin: const EdgeInsets.only(bottom: 12),
                   child: ListTile(
@@ -115,17 +268,17 @@ class _FilesScreenState extends State<FilesScreen> {
                       width: 50,
                       height: 50,
                       decoration: BoxDecoration(
-                        color: _getFileTypeColor(file.type),
+                        color: _getFileTypeColor(document.type),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
-                        _getFileTypeIcon(file.type),
+                        _getFileTypeIcon(document.type),
                         color: AppColors.white,
                         size: 24,
                       ),
                     ),
                     title: Text(
-                      file.name,
+                      document.name,
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
                         color: AppColors.primaryBlue,
@@ -135,14 +288,14 @@ class _FilesScreenState extends State<FilesScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '${file.type} • ${file.size}',
+                          '${document.type} • ${document.formattedSize}',
                           style: const TextStyle(
                             color: AppColors.grey,
                             fontSize: 12,
                           ),
                         ),
                         Text(
-                          'Yüklenme: ${_formatDate(file.uploadDate)}',
+                          'Yüklenme: ${_formatDate(document.uploadedAt)}',
                           style: const TextStyle(
                             color: AppColors.grey,
                             fontSize: 12,
@@ -150,59 +303,78 @@ class _FilesScreenState extends State<FilesScreen> {
                         ),
                       ],
                     ),
-                    trailing: PopupMenuButton(
-                      icon: const Icon(Icons.more_vert),
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: 'view',
-                          child: Row(
-                            children: [
-                              Icon(Icons.visibility),
-                              SizedBox(width: 8),
-                              Text('Görüntüle'),
-                            ],
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: Icon(
+                            document.isFavorite
+                                ? Icons.favorite
+                                : Icons.favorite_border,
+                            color: document.isFavorite
+                                ? AppColors.accentRed
+                                : AppColors.grey,
                           ),
+                          onPressed: () => _toggleFavorite(document),
                         ),
-                        const PopupMenuItem(
-                          value: 'share',
-                          child: Row(
-                            children: [
-                              Icon(Icons.share),
-                              SizedBox(width: 8),
-                              Text('Paylaş'),
-                            ],
-                          ),
-                        ),
-                        const PopupMenuItem(
-                          value: 'delete',
-                          child: Row(
-                            children: [
-                              Icon(Icons.delete, color: Colors.red),
-                              SizedBox(width: 8),
-                              Text('Sil', style: TextStyle(color: Colors.red)),
-                            ],
-                          ),
+                        PopupMenuButton(
+                          icon: const Icon(Icons.more_vert),
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(
+                              value: 'view',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.visibility),
+                                  SizedBox(width: 8),
+                                  Text('Görüntüle'),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'share',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.share),
+                                  SizedBox(width: 8),
+                                  Text('Paylaş'),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'delete',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.delete, color: Colors.red),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Sil',
+                                    style: TextStyle(color: Colors.red),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                          onSelected: (value) {
+                            switch (value) {
+                              case 'view':
+                                // Dosya görüntüleme
+                                break;
+                              case 'share':
+                                // Dosya paylaşma
+                                break;
+                              case 'delete':
+                                _deleteFile(document);
+                                break;
+                            }
+                          },
                         ),
                       ],
-                      onSelected: (value) {
-                        switch (value) {
-                          case 'view':
-                            // Dosya görüntüleme
-                            break;
-                          case 'share':
-                            // Dosya paylaşma
-                            break;
-                          case 'delete':
-                            _deleteFile(index);
-                            break;
-                        }
-                      },
                     ),
                     onTap: () {
                       // Dosya detayları
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('${file.name} açılıyor...'),
+                          content: Text('${document.name} açılıyor...'),
                           backgroundColor: AppColors.primaryBlue,
                         ),
                       );
@@ -212,15 +384,7 @@ class _FilesScreenState extends State<FilesScreen> {
               },
             ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Dosya ekleme
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Dosya ekleme özelliği yakında gelecek'),
-              backgroundColor: AppColors.primaryBlue,
-            ),
-          );
-        },
+        onPressed: _uploadFile,
         backgroundColor: AppColors.primaryYellow,
         foregroundColor: AppColors.primaryBlue,
         child: const Icon(Icons.add),
@@ -229,7 +393,7 @@ class _FilesScreenState extends State<FilesScreen> {
   }
 
   Color _getFileTypeColor(String type) {
-    switch (type) {
+    switch (type.toUpperCase()) {
       case 'PDF':
         return Colors.red;
       case 'DOCX':
@@ -239,14 +403,15 @@ class _FilesScreenState extends State<FilesScreen> {
         return Colors.grey;
       case 'JPG':
       case 'PNG':
-        return AppColors.white;
+      case 'JPEG':
+        return Colors.green;
       default:
         return AppColors.primaryBlue;
     }
   }
 
   IconData _getFileTypeIcon(String type) {
-    switch (type) {
+    switch (type.toUpperCase()) {
       case 'PDF':
         return Icons.picture_as_pdf;
       case 'DOCX':
@@ -256,6 +421,7 @@ class _FilesScreenState extends State<FilesScreen> {
         return Icons.text_snippet;
       case 'JPG':
       case 'PNG':
+      case 'JPEG':
         return Icons.image;
       default:
         return Icons.insert_drive_file;
@@ -277,12 +443,3 @@ class _FilesScreenState extends State<FilesScreen> {
     }
   }
 }
-
-class FileItem {
-  final String name;
-  final String type;
-  final String size;
-  final DateTime uploadDate;
-
-  FileItem(this.name, this.type, this.size, this.uploadDate);
-} 
