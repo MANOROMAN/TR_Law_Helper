@@ -65,7 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text(
-                          'Hukuki Asistan',
+                          'TCK AI',
                           style: TextStyle(
                             color: AppColors.white,
                             fontSize: 28,

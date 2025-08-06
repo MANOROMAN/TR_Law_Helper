@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'dart:ui';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/firebase_service.dart';
 import 'home_screen.dart';
@@ -16,9 +15,7 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
-  late AnimationController _logoController;
   late AnimationController _fadeController;
-  late Animation<double> _logoAnimation;
   late Animation<double> _fadeAnimation;
   final FirebaseService _firebaseService = FirebaseService();
 
@@ -26,18 +23,9 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
-    _logoController = AnimationController(
-      duration: const Duration(seconds: 2),
-      vsync: this,
-    );
-
     _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 1500),
       vsync: this,
-    );
-
-    _logoAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _logoController, curve: Curves.elasticOut),
     );
 
     _fadeAnimation = Tween<double>(
@@ -48,48 +36,25 @@ class _SplashScreenState extends State<SplashScreen>
     _startAnimations();
   }
 
-  void _startAnimations() async {
-    await _logoController.forward();
-    await Future.delayed(const Duration(milliseconds: 500));
-    await _fadeController.forward();
-
-    // Firebase authentication kontrolü
-    Timer(const Duration(seconds: 3), () {
-      _checkAuthState();
-    });
+  void _startAnimations() {
+    _fadeController.forward();
+    // Navigate after a delay to show the splash screen
+    Timer(const Duration(seconds: 4), _checkAuthState);
   }
 
   void _checkAuthState() {
+    if (!mounted) return; // Check if the widget is still in the tree
     User? currentUser = _firebaseService.currentUser;
     
-    if (currentUser != null) {
-      // Kullanıcı giriş yapmış, ana sayfaya git
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) => const HomeScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-          transitionDuration: const Duration(milliseconds: 800),
-        ),
-      );
-    } else {
-      // Kullanıcı giriş yapmamış, giriş sayfasına git
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) => const LoginScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-          transitionDuration: const Duration(milliseconds: 800),
-        ),
-      );
-    }
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => currentUser != null ? const HomeScreen() : const LoginScreen(),
+      ),
+    );
   }
 
   @override
   void dispose() {
-    _logoController.dispose();
     _fadeController.dispose();
     super.dispose();
   }
@@ -98,162 +63,270 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        width: double.infinity,
-        height: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
             colors: [
-              AppColors.primaryBlue,
-              AppColors.secondaryBlue,
-              AppColors.lightBlue,
+              Color(0xFF1E3A8A), // Deep blue
+              Color(0xFF3B82F6), // Blue
+              Color(0xFF60A5FA), // Light blue
+              Color(0xFF93C5FD), // Very light blue
             ],
+            stops: [0.0, 0.4, 0.7, 1.0],
           ),
         ),
-        child: Stack(
-          children: [
-            // Blurred Background Image
-            Positioned.fill(
-              child: ClipRect(
-                child: ImageFiltered(
-                  imageFilter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                  child: Container(
-                    decoration: const BoxDecoration(
-                      image: DecorationImage(
-                        image: AssetImage('assets/images/lady_justice_bg.png'),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Stack(
+            children: [
+              // Geometric shapes for modern look
+              Positioned(
+                top: -50,
+                right: -50,
+                child: Container(
+                  width: 200,
+                  height: 200,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.1),
                   ),
                 ),
               ),
-            ),
-
-            // Overlay for better text readability
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.primaryBlue.withOpacity(0.2),
+              Positioned(
+                bottom: -100,
+                left: -100,
+                child: Container(
+                  width: 300,
+                  height: 300,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.05),
+                  ),
                 ),
               ),
-            ),
-
-            // Content
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Logo Animation
-                  ScaleTransition(
-                    scale: _logoAnimation,
-                    child: Container(
-                      width: 120,
-                      height: 120,
+              
+              // Main content
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Turkish Flag with modern container
+                    Container(
+                      width: 140,
+                      height: 100,
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(30),
+                        borderRadius: BorderRadius.circular(15),
+                        color: Colors.white.withOpacity(0.15),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
+                          width: 2,
+                        ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.3),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 10,
+                            offset: const Offset(0, 5),
                           ),
                         ],
                       ),
-                      child: const Icon(
-                        Icons.gavel,
-                        size: 60,
-                        color: AppColors.primaryBlue,
+                      padding: const EdgeInsets.all(8),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.asset(
+                          'assets/images/turk_bayragi.png',
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            // Bayrak dosyası bulunamazsa Türk bayrağını çizelim
+                            return Container(
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFE30A17), // Türk bayrağı kırmızısı
+                              ),
+                              child: Stack(
+                                children: [
+                                  // Ay ve yıldız
+                                  Positioned(
+                                    left: 20,
+                                    top: 15,
+                                    child: Container(
+                                      width: 35,
+                                      height: 35,
+                                      decoration: const BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    left: 28,
+                                    top: 15,
+                                    child: Container(
+                                      width: 35,
+                                      height: 35,
+                                      decoration: const BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: Color(0xFFE30A17),
+                                      ),
+                                    ),
+                                  ),
+                                  // Yıldız
+                                  const Positioned(
+                                    left: 65,
+                                    top: 25,
+                                    child: Icon(
+                                      Icons.star,
+                                      color: Colors.white,
+                                      size: 15,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 40),
 
-                  const SizedBox(height: 40),
-
-                  // App Title
-                  FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: const Text(
-                      'Hukuki Asistan',
+                    // App name with modern typography
+                    const Text(
+                      'TCK AI',
                       style: TextStyle(
-                        color: AppColors.white,
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.2,
+                        color: Colors.white,
+                        fontSize: 42,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 3.0,
                         shadows: [
                           Shadow(
                             offset: Offset(0, 2),
                             blurRadius: 4,
-                            color: Colors.black54,
+                            color: Colors.black26,
                           ),
                         ],
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 15),
+                    
+                    // Subtitle with elegant design
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        color: Colors.white.withOpacity(0.1),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.2),
+                          width: 1,
+                        ),
+                      ),
+                      child: const Text(
+                        'Adaletin Yapay Zekâsı',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w400,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 50),
 
-                  const SizedBox(height: 16),
-
-                  // Subtitle
-                  FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: const Text(
-                      'Türk Hukuk Sistemi İçin\nAI Destekli Danışman',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: AppColors.white,
-                        fontSize: 16,
-                        height: 1.5,
-                        fontWeight: FontWeight.w500,
-                        shadows: [
-                          Shadow(
-                            offset: Offset(0, 1),
-                            blurRadius: 2,
-                            color: Colors.black54,
+                    // Atatürk'ün Sözü
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(15),
+                        color: Colors.white.withOpacity(0.08),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.2),
+                          width: 1,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 10,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          const Text(
+                            '"Adalet gücü bağımsız olmayan bir milletin, devlet halinde varlığı kabul olmaz."',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                              fontStyle: FontStyle.italic,
+                              height: 1.4,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 15),
+                          
+                          // Atatürk İmzası
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              // İmza görüntüsü
+                              Container(
+                                height: 40,
+                                width: 120,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8),
+                                  color: Colors.white.withOpacity(0.1),
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.asset(
+                                    'assets/images/ataturk_imza.png',
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      // İmza dosyası bulunamazsa text göster
+                                      return const Center(
+                                        child: Text(
+                                          'M. Kemal Atatürk',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            fontStyle: FontStyle.italic,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 40),
 
-                  const SizedBox(height: 80),
-
-                  // Loading Indicator
-                  FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: const CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        AppColors.white,
+                    // Modern loading indicator
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withOpacity(0.1),
                       ),
-                      strokeWidth: 4,
-                    ),
-                  ),
-
-                  const SizedBox(height: 40),
-
-                  // Version Info
-                  FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: const Text(
-                      'v1.0.0',
-                      style: TextStyle(
-                        color: AppColors.lightWhite,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w300,
-                        shadows: [
-                          Shadow(
-                            offset: Offset(0, 1),
-                            blurRadius: 2,
-                            color: Colors.black54,
-                          ),
-                        ],
+                      child: const SizedBox(
+                        width: 30,
+                        height: 30,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 3,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

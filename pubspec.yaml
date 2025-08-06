@@ -1,5 +1,5 @@
-name: hukuki_asistan
-description: "Türk hukuk sistemi için AI destekli mobil hukuki danışman uygulaması"
+name: tckai
+description: "TCK AI - Türk Ceza Kanunu için Yapay Zeka destekli hukuki danışman uygulaması"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev

@@ -13,16 +13,16 @@ Future<void> main() async {
 
   // await NotificationService().init();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-  runApp(const HukukiAsistanApp());
+  runApp(const TCKAIApp());
 }
 
-class HukukiAsistanApp extends StatelessWidget {
-  const HukukiAsistanApp({super.key});
+class TCKAIApp extends StatelessWidget {
+  const TCKAIApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Hukuki Asistan',
+      title: 'TCK AI',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
