@@ -25,20 +25,30 @@ class _FilesScreenState extends State<FilesScreen> {
   void initState() {
     super.initState();
     _userId = FirebaseAuth.instance.currentUser?.uid;
+    debugPrint('=== FILES SCREEN INIT ===');
+    debugPrint('Kullanıcı ID: $_userId');
+    debugPrint(
+      'Kullanıcı giriş yapmış mı: ${FirebaseAuth.instance.currentUser != null}',
+    );
     if (_userId != null) {
       _loadDocuments();
+    } else {
+      debugPrint('HATA: Kullanıcı giriş yapmamış');
     }
   }
 
   void _loadDocuments() async {
     if (_userId == null) return;
 
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
     });
 
     try {
       final documentsData = await _firebaseService.getUserDocuments(_userId!);
+
+      if (!mounted) return;
       setState(() {
         _documents = documentsData.map((data) {
           return Document(
@@ -55,9 +65,11 @@ class _FilesScreenState extends State<FilesScreen> {
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
       });
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Dosyalar yüklenirken hata oluştu: $e')),
       );
@@ -76,7 +88,9 @@ class _FilesScreenState extends State<FilesScreen> {
     }
 
     try {
-      debugPrint('Dosya seçimi başlatılıyor...');
+      debugPrint('=== DOSYA YÜKLEME BAŞLATILIYOR ===');
+      debugPrint('Kullanıcı ID: $_userId');
+
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'jpg', 'jpeg', 'png'],
@@ -94,11 +108,19 @@ class _FilesScreenState extends State<FilesScreen> {
         debugPrint('Dosya boyutu: ${await file.length()} bytes');
 
         // Show loading dialog
+        if (!mounted) return;
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (context) =>
-              const Center(child: CircularProgressIndicator()),
+          builder: (context) => const AlertDialog(
+            content: Row(
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(width: 16),
+                Text('Dosya yükleniyor...'),
+              ],
+            ),
+          ),
         );
 
         debugPrint('Firebase service çağrılıyor...');
@@ -109,19 +131,38 @@ class _FilesScreenState extends State<FilesScreen> {
           documentType: fileExtension.toUpperCase(),
         );
 
+        debugPrint('Firebase service yanıtı: $downloadUrl');
+
+        if (!mounted) return;
         Navigator.of(context).pop(); // Close loading dialog
 
         if (downloadUrl != null && downloadUrl.isNotEmpty) {
           debugPrint('Dosya başarıyla yüklendi: $downloadUrl');
           _loadDocuments(); // Reload documents
+          if (!mounted) return;
+
+          String message;
+          if (downloadUrl == 'local_only') {
+            message =
+                '$fileName bilgileri kaydedildi (dosya içeriği yüklenemedi)';
+          } else if (downloadUrl == 'upload_failed') {
+            message =
+                '$fileName bilgileri kaydedildi (dosya yükleme başarısız)';
+          } else {
+            message = '$fileName başarıyla yüklendi';
+          }
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('$fileName başarıyla yüklendi'),
-              backgroundColor: AppColors.primaryBlue,
+              content: Text(message),
+              backgroundColor: downloadUrl.startsWith('http')
+                  ? AppColors.primaryBlue
+                  : Colors.orange,
             ),
           );
         } else {
           debugPrint('Dosya yükleme başarısız - downloadUrl null veya boş');
+          if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Dosya yükleme başarısız'),
@@ -133,12 +174,26 @@ class _FilesScreenState extends State<FilesScreen> {
         debugPrint('Dosya seçimi iptal edildi');
       }
     } catch (e) {
-      debugPrint('Dosya yükleme hatası: $e');
+      debugPrint('=== DOSYA YÜKLEME HATASI ===');
+      debugPrint('Hata türü: ${e.runtimeType}');
+      debugPrint('Hata mesajı: $e');
+      debugPrint('Stack trace: ${StackTrace.current}');
+
+      if (!mounted) return;
       Navigator.of(context).pop(); // Close loading dialog if open
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Dosya yükleme hatası: $e'),
+          content: Text(e.toString().replaceAll('Exception: ', '')),
           backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: 'Tamam',
+            textColor: Colors.white,
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            },
+          ),
         ),
       );
     }
@@ -178,7 +233,9 @@ class _FilesScreenState extends State<FilesScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Dosyayı Sil'),
-        content: Text('${document.name} dosyasını silmek istediğinizden emin misiniz?'),
+        content: Text(
+          '${document.name} dosyasını silmek istediğinizden emin misiniz?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -187,18 +244,75 @@ class _FilesScreenState extends State<FilesScreen> {
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
+
+              // Show loading dialog
+              if (!mounted) return;
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (context) => const AlertDialog(
+                  content: Row(
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(width: 16),
+                      Text('Dosya siliniyor...'),
+                    ],
+                  ),
+                ),
+              );
+
+              // Ensure loading dialog is closed after a timeout
+              Future.delayed(const Duration(seconds: 30), () {
+                if (mounted && Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                }
+              });
+
               try {
+                debugPrint('=== DOSYA SİLME BAŞLATILIYOR ===');
+                debugPrint('Kullanıcı ID: $_userId');
+                debugPrint('Dosya ID: ${document.id}');
+                debugPrint('Dosya adı: ${document.name}');
+
                 if (_userId != null) {
                   await _firebaseService.deleteDocument(_userId!, document.id);
-                  _loadDocuments(); // Reload documents after deletion
+                  debugPrint('Dosya başarıyla silindi: ${document.id}');
+
+                  // Check if widget is still mounted before accessing context
+                  if (!mounted) return;
+
+                  // Close loading dialog first
+                  Navigator.of(context).pop();
+
+                  // Reload documents after deletion
+                  _loadDocuments();
+
+                  if (!mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('${document.name} silindi'),
+                      content: Text('${document.name} başarıyla silindi'),
                       backgroundColor: AppColors.primaryBlue,
                     ),
                   );
+                } else {
+                  debugPrint('HATA: Kullanıcı ID null');
+                  // Close loading dialog if userId is null
+                  if (!mounted) return;
+                  Navigator.of(context).pop();
                 }
               } catch (e) {
+                debugPrint('=== DOSYA SİLME HATASI ===');
+                debugPrint('Hata türü: ${e.runtimeType}');
+                debugPrint('Hata mesajı: $e');
+                debugPrint('Stack trace: ${StackTrace.current}');
+
+                // Check if widget is still mounted before accessing context
+                if (!mounted) return;
+
+                // Close loading dialog first
+                Navigator.of(context).pop();
+
+                if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('Dosya silinemedi: $e'),
@@ -222,14 +336,44 @@ class _FilesScreenState extends State<FilesScreen> {
       appBar: AppBar(
         title: const Text(
           'Belgelerim',
-          style: TextStyle(
-            color: AppColors.white,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: AppColors.white, fontWeight: FontWeight.bold),
         ),
         backgroundColor: AppColors.primaryBlue,
         elevation: 0,
         actions: [
+          IconButton(
+            onPressed: () async {
+              debugPrint('=== FIREBASE BAĞLANTI TESTİ ===');
+              try {
+                bool testResult = await _firebaseService
+                    .testStorageConnection();
+                debugPrint('Test sonucu: $testResult');
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      testResult
+                          ? 'Firebase bağlantısı başarılı'
+                          : 'Firebase bağlantısı başarısız',
+                    ),
+                    backgroundColor: testResult
+                        ? AppColors.primaryBlue
+                        : Colors.red,
+                  ),
+                );
+              } catch (e) {
+                debugPrint('Test hatası: $e');
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Test hatası: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            icon: const Icon(Icons.wifi, color: AppColors.white),
+          ),
           IconButton(
             onPressed: () {
               showSearch(
@@ -244,171 +388,168 @@ class _FilesScreenState extends State<FilesScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _documents.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        FontAwesomeIcons.fileCirclePlus,
-                        size: 80,
-                        color: AppColors.grey.withOpacity(0.5),
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        'Henüz belge yüklenmemiş',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: AppColors.grey.withOpacity(0.7),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'İlk belgenizi yüklemek için + butonuna tıklayın',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: AppColors.grey.withOpacity(0.6),
-                        ),
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    FontAwesomeIcons.fileCirclePlus,
+                    size: 80,
+                    color: AppColors.grey.withOpacity(0.5),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Henüz belge yüklenmemiş',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: AppColors.grey.withOpacity(0.7),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'İlk belgenizi yüklemek için + butonuna tıklayın',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.grey.withOpacity(0.6),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _documents.length,
+              itemBuilder: (context, index) {
+                final document = _documents[index];
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.grey.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
                       ),
                     ],
                   ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _documents.length,
-                  itemBuilder: (context, index) {
-                    final document = _documents[index];
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(16),
+                    leading: Container(
+                      width: 48,
+                      height: 48,
                       decoration: BoxDecoration(
+                        color: _getFileTypeColor(document.type),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        _getFileTypeIcon(document.type),
                         color: AppColors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.grey.withOpacity(0.1),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
+                        size: 24,
                       ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.all(16),
-                        leading: Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: _getFileTypeColor(document.type),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(
-                            _getFileTypeIcon(document.type),
-                            color: AppColors.white,
-                            size: 24,
-                          ),
-                        ),
-                        title: Text(
-                          document.name,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 4),
-                            Text(
-                              '${document.type} • ${_formatFileSize(document.fileSize)}',
-                              style: TextStyle(
-                                color: AppColors.grey.withOpacity(0.7),
-                                fontSize: 12,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              _formatDate(document.uploadedAt),
-                              style: TextStyle(
-                                color: AppColors.grey.withOpacity(0.6),
-                                fontSize: 11,
-                              ),
-                            ),
-                          ],
-                        ),
-                        trailing: PopupMenuButton<String>(
-                          onSelected: (value) {
-                            switch (value) {
-                              case 'favorite':
-                                _toggleFavorite(document);
-                                break;
-                              case 'delete':
-                                _deleteFile(document);
-                                break;
-                            }
-                          },
-                          itemBuilder: (context) => [
-                            PopupMenuItem(
-                              value: 'favorite',
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    document.isFavorite
-                                        ? Icons.favorite
-                                        : Icons.favorite_border,
-                                    color: document.isFavorite
-                                        ? Colors.red
-                                        : AppColors.grey,
-                                    size: 16,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    document.isFavorite
-                                        ? 'Favorilerden Çıkar'
-                                        : 'Favorilere Ekle',
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const PopupMenuItem(
-                              value: 'delete',
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.delete_outline,
-                                    color: Colors.red,
-                                    size: 16,
-                                  ),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'Sil',
-                                    style: TextStyle(color: Colors.red),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            child: Icon(
-                              Icons.more_vert,
-                              color: AppColors.grey.withOpacity(0.6),
-                            ),
-                          ),
-                        ),
-                        onTap: () {
-                          // Open document or show preview
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('${document.name} açılıyor...'),
-                              backgroundColor: AppColors.primaryBlue,
-                            ),
-                          );
-                        },
+                    ),
+                    title: Text(
+                      document.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
                       ),
-                    );
-                  },
-                ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 4),
+                        Text(
+                          '${document.type} • ${_formatFileSize(document.fileSize)}',
+                          style: TextStyle(
+                            color: AppColors.grey.withOpacity(0.7),
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _formatDate(document.uploadedAt),
+                          style: TextStyle(
+                            color: AppColors.grey.withOpacity(0.6),
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                    trailing: PopupMenuButton<String>(
+                      onSelected: (value) {
+                        switch (value) {
+                          case 'favorite':
+                            _toggleFavorite(document);
+                            break;
+                          case 'delete':
+                            _deleteFile(document);
+                            break;
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        PopupMenuItem(
+                          value: 'favorite',
+                          child: Row(
+                            children: [
+                              Icon(
+                                document.isFavorite
+                                    ? Icons.favorite
+                                    : Icons.favorite_border,
+                                color: document.isFavorite
+                                    ? Colors.red
+                                    : AppColors.grey,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                document.isFavorite
+                                    ? 'Favorilerden Çıkar'
+                                    : 'Favorilere Ekle',
+                              ),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.delete_outline,
+                                color: Colors.red,
+                                size: 16,
+                              ),
+                              SizedBox(width: 8),
+                              Text('Sil', style: TextStyle(color: Colors.red)),
+                            ],
+                          ),
+                        ),
+                      ],
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        child: Icon(
+                          Icons.more_vert,
+                          color: AppColors.grey.withOpacity(0.6),
+                        ),
+                      ),
+                    ),
+                    onTap: () {
+                      // Open document or show preview
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('${document.name} açılıyor...'),
+                          backgroundColor: AppColors.primaryBlue,
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _uploadFile,
         backgroundColor: AppColors.primaryBlue,
@@ -512,9 +653,7 @@ class DocumentSearchDelegate extends SearchDelegate<Document?> {
         .toList();
 
     if (filteredDocuments.isEmpty) {
-      return const Center(
-        child: Text('Aradığınız belge bulunamadı'),
-      );
+      return const Center(child: Text('Aradığınız belge bulunamadı'));
     }
 
     return ListView.builder(

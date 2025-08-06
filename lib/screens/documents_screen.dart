@@ -22,9 +22,15 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
   void initState() {
     super.initState();
     _userId = FirebaseAuth.instance.currentUser?.uid;
+    debugPrint('=== DOCUMENTS SCREEN INIT ===');
+    debugPrint('Kullanıcı ID: $_userId');
+    debugPrint(
+      'Kullanıcı giriş yapmış mı: ${FirebaseAuth.instance.currentUser != null}',
+    );
     if (_userId != null) {
       _loadDocuments();
     } else {
+      debugPrint('HATA: Kullanıcı giriş yapmamış');
       setState(() {
         _isLoading = false;
       });
@@ -34,23 +40,43 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
   void _loadDocuments() {
     if (_userId == null) return;
 
-    _firebaseService.getUserDocumentsStream(_userId!).listen((documentsData) {
-      setState(() {
-        _documents = documentsData.map((data) {
-          return Document(
-            id: data['id'] ?? '',
-            name: data['name'] ?? '',
-            type: data['type'] ?? '',
-            url: data['url'] ?? '',
-            fileSize: data['fileSize'] ?? 0,
-            uploadedAt: (data['uploadedAt'] as Timestamp).toDate(),
-            isFavorite: data['isFavorite'] ?? false,
-            userId: data['userId'] ?? '',
-          );
-        }).toList();
-        _isLoading = false;
-      });
-    });
+    debugPrint('Dokümanlar yükleniyor...');
+    _firebaseService
+        .getUserDocumentsStream(_userId!)
+        .listen(
+          (documentsData) {
+            if (!mounted) return;
+            debugPrint('Dokümanlar güncellendi: ${documentsData.length} adet');
+            setState(() {
+              _documents = documentsData.map((data) {
+                return Document(
+                  id: data['id'] ?? '',
+                  name: data['name'] ?? '',
+                  type: data['type'] ?? '',
+                  url: data['url'] ?? '',
+                  fileSize: data['fileSize'] ?? 0,
+                  uploadedAt: (data['uploadedAt'] as Timestamp).toDate(),
+                  isFavorite: data['isFavorite'] ?? false,
+                  userId: data['userId'] ?? '',
+                );
+              }).toList();
+              _isLoading = false;
+            });
+          },
+          onError: (error) {
+            debugPrint('Doküman yükleme hatası: $error');
+            if (!mounted) return;
+            setState(() {
+              _isLoading = false;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Dokümanlar yüklenirken hata oluştu: $error'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          },
+        );
   }
 
   Future<void> _pickFile() async {
@@ -65,6 +91,9 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
     }
 
     try {
+      debugPrint('=== DOSYA YÜKLEME BAŞLATILIYOR (DOCUMENTS) ===');
+      debugPrint('Kullanıcı ID: $_userId');
+
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'jpg', 'jpeg', 'png'],
@@ -72,18 +101,32 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
       );
 
       if (result != null) {
+        debugPrint('Dosya seçildi: ${result.files.single.name}');
         File file = File(result.files.single.path!);
         String fileName = result.files.single.name;
         String fileExtension = fileName.split('.').last.toLowerCase();
 
+        debugPrint('Dosya yolu: ${file.path}');
+        debugPrint('Dosya var mı: ${await file.exists()}');
+        debugPrint('Dosya boyutu: ${await file.length()} bytes');
+
         // Show loading dialog
+        if (!mounted) return;
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (context) =>
-              const Center(child: CircularProgressIndicator()),
+          builder: (context) => const AlertDialog(
+            content: Row(
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(width: 16),
+                Text('Dosya yükleniyor...'),
+              ],
+            ),
+          ),
         );
 
+        debugPrint('Firebase service çağrılıyor...');
         String? downloadUrl = await _firebaseService.uploadDocument(
           userId: _userId!,
           documentFile: file,
@@ -91,16 +134,37 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
           documentType: fileExtension.toUpperCase(),
         );
 
+        debugPrint('Firebase service yanıtı: $downloadUrl');
+
+        if (!mounted) return;
         Navigator.of(context).pop(); // Close loading dialog
 
         if (downloadUrl != null && downloadUrl.isNotEmpty) {
+          debugPrint('Dosya başarıyla yüklendi: $downloadUrl');
+          if (!mounted) return;
+
+          String message;
+          if (downloadUrl == 'local_only') {
+            message =
+                '$fileName bilgileri kaydedildi (dosya içeriği yüklenemedi)';
+          } else if (downloadUrl == 'upload_failed') {
+            message =
+                '$fileName bilgileri kaydedildi (dosya yükleme başarısız)';
+          } else {
+            message = '$fileName başarıyla yüklendi';
+          }
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('$fileName başarıyla yüklendi'),
-              backgroundColor: AppColors.primaryBlue,
+              content: Text(message),
+              backgroundColor: downloadUrl.startsWith('http')
+                  ? AppColors.primaryBlue
+                  : Colors.orange,
             ),
           );
         } else {
+          debugPrint('Dosya yükleme başarısız - downloadUrl null veya boş');
+          if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Dosya yükleme başarısız'),
@@ -108,11 +172,31 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
             ),
           );
         }
+      } else {
+        debugPrint('Dosya seçimi iptal edildi');
       }
     } catch (e) {
+      debugPrint('=== DOSYA YÜKLEME HATASI (DOCUMENTS) ===');
+      debugPrint('Hata türü: ${e.runtimeType}');
+      debugPrint('Hata mesajı: $e');
+      debugPrint('Stack trace: ${StackTrace.current}');
+
+      if (!mounted) return;
       Navigator.of(context).pop(); // Close loading dialog if open
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Hata: $e'), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text(e.toString().replaceAll('Exception: ', '')),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: 'Tamam',
+            textColor: Colors.white,
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            },
+          ),
+        ),
       );
     }
   }
@@ -171,19 +255,67 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
             onPressed: () async {
               Navigator.of(context).pop();
 
-              try {
-                await _firebaseService.deleteDocument(_userId!, document.id);
+              // Show loading dialog
+              if (!mounted) return;
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (context) => const AlertDialog(
+                  content: Row(
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(width: 16),
+                      Text('Dosya siliniyor...'),
+                    ],
+                  ),
+                ),
+              );
 
+              // Ensure loading dialog is closed after a timeout
+              Future.delayed(const Duration(seconds: 30), () {
+                if (mounted && Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                }
+              });
+
+              try {
+                debugPrint('=== DOSYA SİLME BAŞLATILIYOR (DOCUMENTS) ===');
+                debugPrint('Kullanıcı ID: $_userId');
+                debugPrint('Dosya ID: ${document.id}');
+                debugPrint('Dosya adı: ${document.name}');
+
+                await _firebaseService.deleteDocument(_userId!, document.id);
+                debugPrint('Dosya başarıyla silindi: ${document.id}');
+
+                // Check if widget is still mounted before accessing context
+                if (!mounted) return;
+
+                // Close loading dialog first
+                Navigator.of(context).pop();
+
+                if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('${document.name} silindi'),
+                    content: Text('${document.name} başarıyla silindi'),
                     backgroundColor: AppColors.primaryBlue,
                   ),
                 );
               } catch (e) {
+                debugPrint('=== DOSYA SİLME HATASI (DOCUMENTS) ===');
+                debugPrint('Hata türü: ${e.runtimeType}');
+                debugPrint('Hata mesajı: $e');
+                debugPrint('Stack trace: ${StackTrace.current}');
+
+                // Check if widget is still mounted before accessing context
+                if (!mounted) return;
+
+                // Close loading dialog first
+                Navigator.of(context).pop();
+
+                if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Dosya silinirken hata oluştu: $e'),
+                    content: Text('Dosya silinemedi: $e'),
                     backgroundColor: Colors.red,
                   ),
                 );
@@ -205,6 +337,39 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
         foregroundColor: AppColors.white,
         iconTheme: const IconThemeData(color: AppColors.primaryYellow),
         actions: [
+          IconButton(
+            onPressed: () async {
+              debugPrint('=== FIREBASE BAĞLANTI TESTİ (DOCUMENTS) ===');
+              try {
+                bool testResult = await _firebaseService
+                    .testStorageConnection();
+                debugPrint('Test sonucu: $testResult');
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      testResult
+                          ? 'Firebase bağlantısı başarılı'
+                          : 'Firebase bağlantısı başarısız',
+                    ),
+                    backgroundColor: testResult
+                        ? AppColors.primaryBlue
+                        : Colors.red,
+                  ),
+                );
+              } catch (e) {
+                debugPrint('Test hatası: $e');
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Test hatası: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            icon: const Icon(Icons.wifi, color: AppColors.white),
+          ),
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {

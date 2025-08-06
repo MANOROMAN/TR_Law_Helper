@@ -169,15 +169,73 @@ class FirebaseService {
         return null;
       }
 
-      // Önce Firestore'da belge kaydını oluştur
+      // Firebase Storage bağlantısını test et
+      debugPrint('Firebase Storage bağlantısı test ediliyor...');
+      bool storageAvailable = false;
+
+      try {
+        // Önce Storage referansını test et
+        Reference storageRef = _storage.ref();
+        debugPrint('Storage referansı oluşturuldu');
+
+        String testFileName =
+            'test_${DateTime.now().millisecondsSinceEpoch}.txt';
+        Reference testRef = storageRef.child('test/$userId/$testFileName');
+        debugPrint(
+          'Test dosyası referansı oluşturuldu: test/$userId/$testFileName',
+        );
+
+        String testContent = 'Test dosyası - ${DateTime.now()}';
+        Uint8List testBytes = Uint8List.fromList(testContent.codeUnits);
+        debugPrint('Test dosyası hazırlandı: ${testBytes.length} bytes');
+
+        // Upload task'ı başlat
+        UploadTask testTask = testRef.putData(testBytes);
+        debugPrint('Test upload task başlatıldı');
+
+        // Progress'i dinle
+        testTask.snapshotEvents.listen((TaskSnapshot snapshot) {
+          double progress = snapshot.bytesTransferred / snapshot.totalBytes;
+          debugPrint(
+            'Test upload progress: ${(progress * 100).toStringAsFixed(1)}%',
+          );
+        });
+
+        TaskSnapshot testSnapshot = await testTask;
+        debugPrint('Test upload tamamlandı');
+
+        String testUrl = await testSnapshot.ref.getDownloadURL();
+        debugPrint('Test dosyası URL alındı: $testUrl');
+
+        await testSnapshot.ref.delete(); // Test dosyasını sil
+        debugPrint('Test dosyası silindi');
+        debugPrint('Firebase Storage bağlantısı başarılı');
+        storageAvailable = true;
+      } catch (testError) {
+        debugPrint('Firebase Storage bağlantı hatası: $testError');
+        debugPrint('Hata türü: ${testError.runtimeType}');
+
+        if (testError is FirebaseException) {
+          debugPrint('Firebase hata kodu: ${testError.code}');
+          debugPrint('Firebase hata mesajı: ${testError.message}');
+        }
+
+        debugPrint(
+          'Firebase Storage kullanılamıyor, sadece Firestore kullanılacak',
+        );
+        storageAvailable = false;
+      }
+
+      // Firestore'da belge kaydını oluştur
       Map<String, dynamic> documentData = {
         'name': documentName,
         'type': documentType,
-        'url': '', // Geçici olarak boş
+        'url': storageAvailable ? '' : 'local_only', // Storage yoksa local_only
         'uploadedAt': FieldValue.serverTimestamp(),
         'fileSize': fileSize,
         'isFavorite': false,
         'userId': userId,
+        'storageAvailable': storageAvailable,
       };
 
       debugPrint('Firestore verisi hazırlandı: $documentData');
@@ -190,65 +248,73 @@ class FirebaseService {
 
       debugPrint('Firestore kaydı oluşturuldu: ${docRef.id}');
 
-      // Şimdi Storage'a yükle
-      String fileName = 'documents/$userId/${docRef.id}_$documentName';
-      Reference ref = _storage.ref().child(fileName);
+      // Eğer Storage kullanılabilirse dosyayı yükle
+      if (storageAvailable) {
+        try {
+          String fileName =
+              'documents/$userId/${DateTime.now().millisecondsSinceEpoch}_$documentName';
+          Reference ref = _storage.ref().child(fileName);
 
-      debugPrint('Storage referansı oluşturuldu: $fileName');
+          debugPrint('Storage referansı oluşturuldu: $fileName');
 
-      // Dosyayı byte array olarak oku ve yükle
-      Uint8List fileBytes = await documentFile.readAsBytes();
-      debugPrint('Dosya byte array olarak okundu: ${fileBytes.length} bytes');
+          // Dosyayı byte array olarak oku ve yükle
+          Uint8List fileBytes = await documentFile.readAsBytes();
+          debugPrint(
+            'Dosya byte array olarak okundu: ${fileBytes.length} bytes',
+          );
 
-      UploadTask uploadTask = ref.putData(fileBytes);
-      debugPrint('Upload task başlatıldı');
+          // Upload task'ı başlat ve progress'i takip et
+          UploadTask uploadTask = ref.putData(fileBytes);
+          debugPrint('Upload task başlatıldı');
 
-      TaskSnapshot snapshot = await uploadTask;
-      debugPrint('Upload tamamlandı');
+          // Upload progress'ini dinle
+          uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
+            double progress = snapshot.bytesTransferred / snapshot.totalBytes;
+            debugPrint(
+              'Upload progress: ${(progress * 100).toStringAsFixed(1)}%',
+            );
+          });
 
-      String downloadUrl = await snapshot.ref.getDownloadURL();
-      debugPrint('Download URL alındı: $downloadUrl');
-      debugPrint('Download URL uzunluğu: ${downloadUrl.length}');
+          TaskSnapshot snapshot = await uploadTask;
+          debugPrint('Upload tamamlandı');
 
-      // Firestore'da URL'i güncelle
-      await docRef.update({'url': downloadUrl});
+          String downloadUrl = await snapshot.ref.getDownloadURL();
+          debugPrint('Download URL alındı: $downloadUrl');
+          debugPrint('Download URL uzunluğu: ${downloadUrl.length}');
 
-      debugPrint('Firestore URL güncellendi');
+          // Firestore'da URL'i güncelle
+          await docRef.update({'url': downloadUrl});
 
-      // Başarılı olduğunu doğrula
-      if (downloadUrl.isNotEmpty) {
-        debugPrint('Dosya yükleme başarılı: $downloadUrl');
-        return downloadUrl;
+          debugPrint('Firestore URL güncellendi');
+
+          // Başarılı olduğunu doğrula
+          if (downloadUrl.isNotEmpty) {
+            debugPrint('Dosya yükleme başarılı: $downloadUrl');
+            return downloadUrl;
+          } else {
+            debugPrint('HATA: Download URL boş');
+            return null;
+          }
+        } catch (storageError) {
+          debugPrint('Storage yükleme hatası: $storageError');
+          // Storage hatası olsa bile Firestore kaydı başarılı
+          await docRef.update({
+            'url': 'upload_failed',
+            'error': storageError.toString(),
+          });
+          return 'upload_failed';
+        }
       } else {
-        debugPrint('HATA: Download URL boş');
-        return null;
+        // Storage kullanılamıyorsa sadece Firestore kaydı yeterli
+        debugPrint('Dosya bilgileri sadece Firestore\'da saklandı');
+        return 'local_only';
       }
     } catch (e) {
       debugPrint('Belge yükleme hatası: $e');
       debugPrint('Hata türü: ${e.runtimeType}');
-      if (e is FirebaseException) {
-        debugPrint('Firebase hata kodu: ${e.code}');
-        debugPrint('Firebase hata mesajı: ${e.message}');
 
-        // Yaygın hata kodları için özel mesajlar
-        switch (e.code) {
-          case 'storage/unauthorized':
-            debugPrint('HATA: Firebase Storage yetkilendirme hatası');
-            break;
-          case 'storage/quota-exceeded':
-            debugPrint('HATA: Firebase Storage kotası aşıldı');
-            break;
-          case 'storage/unauthenticated':
-            debugPrint('HATA: Kullanıcı kimlik doğrulaması gerekli');
-            break;
-          case 'storage/object-not-found':
-            debugPrint('HATA: Firebase Storage objesi bulunamadı');
-            break;
-          default:
-            debugPrint('HATA: Bilinmeyen Firebase Storage hatası');
-        }
-      }
-      return null;
+      // Genel hata durumu
+      throw Exception('Dosya yükleme sırasında bir hata oluştu: $e');
     }
   }
 
@@ -276,6 +342,10 @@ class FirebaseService {
   // Belge silme
   Future<void> deleteDocument(String userId, String documentId) async {
     try {
+      debugPrint(
+        'Belge silme başlatılıyor - UserId: $userId, DocumentId: $documentId',
+      );
+
       // Firestore'dan belge bilgisini al
       DocumentSnapshot docSnapshot = await _firestore
           .collection('users')
@@ -285,13 +355,23 @@ class FirebaseService {
           .get();
 
       if (docSnapshot.exists) {
+        debugPrint('Belge Firestore\'da bulundu');
         Map<String, dynamic> data = docSnapshot.data() as Map<String, dynamic>;
         String? fileUrl = data['url'];
+        debugPrint('Dosya URL: $fileUrl');
 
         // Storage'dan dosyayı sil
-        if (fileUrl != null) {
-          Reference ref = _storage.refFromURL(fileUrl);
-          await ref.delete();
+        if (fileUrl != null && fileUrl.isNotEmpty) {
+          try {
+            Reference ref = _storage.refFromURL(fileUrl);
+            await ref.delete();
+            debugPrint('Dosya Storage\'dan silindi');
+          } catch (storageError) {
+            debugPrint('Storage silme hatası (devam ediliyor): $storageError');
+            // Storage hatası olsa bile Firestore'dan silmeye devam et
+          }
+        } else {
+          debugPrint('Dosya URL bulunamadı, sadece Firestore kaydı silinecek');
         }
 
         // Firestore'dan belge kaydını sil
@@ -301,6 +381,10 @@ class FirebaseService {
             .collection('documents')
             .doc(documentId)
             .delete();
+        debugPrint('Belge Firestore\'dan silindi');
+      } else {
+        debugPrint('Belge Firestore\'da bulunamadı');
+        throw Exception('Belge bulunamadı');
       }
     } catch (e) {
       debugPrint('Belge silme hatası: $e');
@@ -409,18 +493,35 @@ class FirebaseService {
         return false;
       }
 
+      debugPrint('Kullanıcı ID: $userId');
+      debugPrint('Firebase Auth durumu: ${_auth.currentUser != null}');
+
+      // Firebase Storage referansını test et
+      Reference storageRef = _storage.ref();
+      debugPrint('Storage referansı oluşturuldu');
+
       // Basit bir test dosyası oluştur
       String testContent = 'Test dosyası - ${DateTime.now()}';
       Uint8List testBytes = Uint8List.fromList(testContent.codeUnits);
 
       String testFileName = 'test_${DateTime.now().millisecondsSinceEpoch}.txt';
-      Reference ref = _storage.ref().child('test/$userId/$testFileName');
+      Reference ref = storageRef.child('test/$userId/$testFileName');
 
       debugPrint('Test dosyası yükleniyor: $testFileName');
+      debugPrint('Test dosyası boyutu: ${testBytes.length} bytes');
 
+      // Upload task'ı başlat
       UploadTask uploadTask = ref.putData(testBytes);
-      TaskSnapshot snapshot = await uploadTask;
 
+      // Upload progress'ini dinle
+      uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
+        double progress = snapshot.bytesTransferred / snapshot.totalBytes;
+        debugPrint(
+          'Test upload progress: ${(progress * 100).toStringAsFixed(1)}%',
+        );
+      });
+
+      TaskSnapshot snapshot = await uploadTask;
       debugPrint('Test dosyası yüklendi');
 
       String downloadUrl = await snapshot.ref.getDownloadURL();
@@ -433,6 +534,8 @@ class FirebaseService {
       return true;
     } catch (e) {
       debugPrint('Firebase Storage test hatası: $e');
+      debugPrint('Hata türü: ${e.runtimeType}');
+
       if (e is FirebaseException) {
         debugPrint('Firebase hata kodu: ${e.code}');
         debugPrint('Firebase hata mesajı: ${e.message}');
@@ -450,8 +553,14 @@ class FirebaseService {
           case 'storage/object-not-found':
             debugPrint('HATA: Firebase Storage objesi bulunamadı');
             break;
-          default:
+          case 'storage/canceled':
+            debugPrint('HATA: Upload iptal edildi');
+            break;
+          case 'storage/unknown':
             debugPrint('HATA: Bilinmeyen Firebase Storage hatası');
+            break;
+          default:
+            debugPrint('HATA: Bilinmeyen Firebase Storage hatası: ${e.code}');
         }
       }
       return false;
